@@ -115,3 +115,141 @@ raw_data %>% head()
 taxon <- raw_data
 ```
 
+## Term mapping
+ 
+Map the data to [Darwin Core Taxon](http://rs.gbif.org/core/dwc_taxon_2015-04-24.xml).
+ 
+### language
+
+```{r}
+taxon %<>% mutate(language = "en")
+```
+
+### rightsHolder
+
+```{r}
+taxon %<>% mutate(rightsHolder = "University of Cambridge")
+```
+
+### datasetID
+
+```{r}
+taxon %<>% mutate(datasetID = "")
+```
+
+### datasetName
+
+```{r}
+taxon %<>% mutate(datasetName = "RINSE - pathways and vectors of biological invasions in Northwest Europe")
+```
+
+### bibliographicCitation
+
+### taxonID
+
+```{r}
+taxon %<>% mutate(taxonID = raw_taxonID)
+```
+
+### scientificName
+
+```{r}
+taxon %<>% mutate(scientificName = raw_species_clean)
+```
+
+### kingdom
+
+```{r}
+taxon %>% distinct(raw_higher_classification)
+```
+
+
+```{r}
+taxon %<>% mutate(kingdom = case_when(
+  raw_higher_classification == "Angiospermae" ~ "Plantae" ,
+  TRUE ~ "Animalia")) 
+```
+
+### phylum
+
+```{r}
+taxon %<>% mutate(phylum = case_when(
+  raw_higher_classification == "Angiospermae" ~ "" ,
+  raw_higher_classification == "Mollusca" ~ "Mollusca",
+  TRUE ~ "Chordata")) 
+```
+
+### class
+
+```{r}
+taxon %<>% mutate(class = case_when(
+  raw_higher_classification == "Anseriformes" ~ "Aves",
+  raw_higher_classification == "Mammalia" ~ "Mammalia",
+  TRUE ~ "")) 
+```
+
+### order
+
+```{r}
+taxon %<>% mutate(order = case_when(
+  raw_higher_classification == "Anseriformes" ~ "Anseriformes",
+  TRUE ~ "" )) 
+```
+
+### higherClassification
+
+```{r}
+taxon %<>% mutate(higherClassification = case_when(
+  raw_higher_classification == "Angiospermae" ~ paste(kingdom, raw_higher_classification, sep = " | "),
+  raw_higher_classification == "Mollusca" ~ paste(kingdom, phylum, sep = " | "),
+  raw_higher_classification == "Osteichthyes" ~ paste(kingdom, phylum, raw_higher_classification, sep = " | "),
+  raw_higher_classification == "Anseriformes" ~ paste(kingdom, phylum, class, order, sep = " | "),
+  raw_higher_classification == "Mammalia" ~ paste(kingdom, phylum, class, sep = " | "))) 
+```
+
+### taxonRank
+
+```{r}
+taxonRank <- parsenames(taxon $ raw_species_clean)
+```
+
+```{r}
+taxonRank %<>% select(scientificname, rankmarker, notho) 
+```
+
+```{r}
+taxon %<>% left_join(taxonRank, by = c("raw_species_clean" = "scientificname")) 
+```
+
+```{r}
+taxon %>% distinct(rankmarker) 
+```
+
+```{r}
+taxon %<>% mutate(taxonRank = case_when(
+  !is.na(notho) ~ "",
+  rankmarker == "sp." & is.na(notho) ~ "species",
+  rankmarker == "infrasp." ~ "subspecies",
+  is.na(rankmarker) ~ "species")) 
+```
+
+## Post-processing
+
+Remove the original columns:
+
+```{r}
+taxon %<>% select(-starts_with("raw_"), -rankmarker, - notho)
+```
+
+Preview data:
+
+```{r}
+head(taxon)
+```
+
+Save to CSV:
+
+```{r}
+write.csv(taxon, file = dwc_taxon_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
+```
+
