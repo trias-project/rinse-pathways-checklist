@@ -439,3 +439,111 @@ Save to CSV:
 write.csv(distribution, file = dwc_distribution_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
+# Create resource relationship extension
+
+```{r start_resource_relationship}
+resource_relationship <- raw_data
+```
+
+## Term mapping
+
+Map the data to [Resource Relationship](http://rs.gbif.org/extension/dwc/resource_relation_2018_01_18.xml).
+
+# Create species profile extension
+
+In this extension will express broad habitat characteristics (e.g. `isTerrestrial`) of the species.
+
+```{r start_species_profile}
+species_profile <- raw_data
+```
+
+Habitat information can be found in `raw_environment`, which describes whether a species is found in freshwater, terrestrial, marine or a combination of these habitats.
+
+Show unique values:
+
+```{r}
+species_profile %>%
+  distinct(raw_environment) %>%
+  arrange(raw_environment)
+```
+
+We map this information respectively to `isFreshwater`, `isTerrestrial`, `isMarine` or a combination of these terms in the species profile extension.
+
+## Term mapping
+
+Map the data to [Species Profile](http://rs.gbif.org/extension/gbif/1.0/speciesprofile.xml).
+
+### taxonID
+
+```{r}
+species_profile %<>% mutate(taxonID = raw_taxonID)
+```
+
+### isMarine
+
+```{r}
+species_profile %<>% mutate(isMarine = case_when(
+  raw_environment == "M" |
+    raw_environment == "M+F" |
+    raw_environment == "T+M" ~ "TRUE",
+  TRUE ~ "FALSE"
+))
+```
+
+### isFreshwater
+
+```{r}
+species_profile %<>% mutate(isFreshwater = case_when(
+  raw_environment == "F" |
+    raw_environment == "F,T" |
+    raw_environment == "F+T" |
+    raw_environment == "M+F" ~ "TRUE",
+  TRUE ~ "FALSE"))
+```
+
+### isTerrestrial
+
+```{r}
+species_profile %<>% mutate(isTerrestrial = case_when(
+  raw_environment == "F,T" |
+    raw_environment == "F+T" |
+    raw_environment == "T" |
+    raw_environment == "T+M" ~ "TRUE",
+  TRUE ~"FALSE"))
+```
+
+Show mapped values:
+
+```{r}
+species_profile %>%
+  select(raw_environment, isMarine, isFreshwater, isTerrestrial) %>%
+  group_by_all() %>%
+  summarize(records = n())
+```
+
+## Post-processing
+
+Remove the original columns:
+
+```{r}
+species_profile %<>% select(-starts_with("raw_"))
+```
+
+Sort on `taxonID`:
+
+```{r}
+species_profile %<>% arrange(taxonID)
+```
+
+Preview data:
+
+```{r}
+species_profile %>% head()
+```
+
+Save to CSV:
+
+```{r}
+write.csv(species_profile, file = dwc_profile_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
+```
+
