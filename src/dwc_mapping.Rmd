@@ -68,3 +68,30 @@ raw_data %<>% remove_empty_rows() %<>%     # Remove empty rows
   clean_names()
 ```
 
+## Clean scientific name
+
+```{r}
+parsed_names <- parsenames(raw_data $ species)
+```
+
+Some errors were detected:
+
+```{r}
+raw_data %<>% mutate(species_clean = case_when(
+  species == "Crassostrea rhizophoraeGuilding 1828" ~ "Crassostrea rhizophorae Guilding 1828",
+  species == "Petricola pholadiformisLamarck, 1818" ~ "Petricola pholadiformis Lamarck, 1818",
+  species == "Theba pisanaMüller, 1774)" ~ "Theba pisana (Müller, 1774)")) 
+```
+
+## Generate taxonID
+
+To uniquely identify a taxon in the taxon core and reference taxa in the extensions, we need a `taxonID`. Since we need it in all generated files, we generate it here in the raw data frame. It is a combination of `dataset-shortname:taxon:` and a hash based on the scientific name. As long as the scientific name doesn't change, the ID will be stable:
+
+```{r}
+# Vectorize the digest function (The digest() function isn't vectorized. So if you pass in a vector, you get one value for the whole vector rather than a digest for each element of the vector):
+vdigest <- Vectorize(digest)
+
+# Generate taxonID:
+raw_data %<>% mutate(taxonID = paste("rinse-pathways-checklist", "taxon", vdigest (species_clean, algo="md5"), sep=":"))
+```
+
