@@ -253,3 +253,189 @@ Save to CSV:
 write.csv(taxon, file = dwc_taxon_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
+# Create distribution extension
+
+Map the data to [Species Distribution](http://rs.gbif.org/extension/gbif/1.0/distribution.xml).
+
+```{r}
+distribution <- raw_data
+```
+
+### pre-processing
+
+Check wether each record for which `raw_presence_gb` = NA --> raw_first_record_gb = NA
+
+```{r}
+distribution %>% filter((is.na(raw_established_gb) & !is.na(raw_first_record_gb))) 
+```
+
+```{r}
+distribution %>% filter((is.na(raw_established_france) & !is.na(raw_first_record_france)))
+```
+
+```{r}
+distribution %>% filter((is.na(raw_established_belgium) & !is.na(raw_first_record_belgium)))
+```
+
+```{r}
+distribution %>% filter((is.na(raw_established_netherlands) & !is.na(raw_first_record_netherlands)))
+```
+
+Paste date and establishment information for each country:
+
+```{r}
+distribution %<>% mutate(record_gb = paste(raw_established_gb, raw_first_record_gb, sep = ",")) 
+```
+
+```{r}
+distribution %<>% mutate(record_fr = paste(raw_established_france, raw_first_record_france, sep = ",")) 
+```
+
+```{r}
+distribution %<>% mutate(record_be = paste(raw_established_belgium, raw_first_record_belgium, sep = ",")) 
+```
+
+```{r}
+distribution %<>% mutate(record_nl = paste(raw_established_netherlands, raw_first_record_netherlands, sep = ",")) 
+```
+
+Frow wide to long dataset:
+
+```{r}
+distribution %<>% gather("country", "date", record_gb, record_fr, record_be, record_nl) 
+```
+
+Remove records with `NA,NA`:
+
+```{r}
+distribution %<>% filter(date != "NA,NA") 
+```
+
+Clean `data`:
+
+```{r}
+distribution %<>% mutate(date = str_replace_all(date, "Y,", "")) 
+```
+
+Rename `country`:
+
+```{r}
+distribution %<>% mutate(country = recode(country,
+  "record_gb" = "Great Britain",
+  "record_fr" = "France",
+  "record_be" = "Belgium",
+  "record_nl" = "The Netherlands"))
+```
+
+## Term mapping
+
+### taxonID
+
+```{r}
+distribution %<>% mutate(taxonID = raw_taxonID)
+```
+
+### locationID
+
+```{r}
+distribution %<>% mutate(locationID = case_when(
+   country == "Great Britain" ~ "ISO_3166-2:GB",
+   country == "France" ~ "ISO_3166-2:FR",
+   country == "Belgium" ~ "ISO_3166-2:BE",
+   country == "The Netherlands" ~ "ISO_3166-2:NL"))
+```
+
+### locality
+
+```{r}
+distribution %<>% mutate(locality = country)
+```
+
+### countryCode
+
+```{r}
+distribution %<>% mutate(countryCode = case_when(
+   country == "Great Britain" ~ "GB",
+   country == "France" ~ "FR",
+   country == "Belgium" ~ "BE",
+   country == "The Netherlands" ~ "NL"))
+```
+
+### occurrenceStatus
+
+```{r}
+distribution %<>% mutate(occurrenceStatus = "present") 
+```
+
+### establishmentMeans
+
+```{r}
+distribution %<>% mutate(establishmentMeans = "established") 
+```
+
+### eventDate
+
+Inspect dates:
+
+```{r}
+distribution %>% distinct(date) %>% arrange(date)
+```
+
+Clean whitespace information:
+
+```{r}
+unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
+```
+
+
+```{r}
+distribution %<>% mutate(date = str_trim(date)) 
+```
+
+
+```{r}
+distribution %<>% mutate(date = recode(date,
+   "n.d."  = "",
+   "17634" = "1763",
+   "2004," = "2004",
+   "n..d"  = "",
+   "199"   = "1990",
+   "1985," = "1985",
+   "NA"    = "",
+   "19204" = "1904")) 
+```
+
+```{r}
+unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
+```
+
+Make date range:
+
+```{r}
+distribution %<>% mutate(eventDate = case_when(
+  date == "" ~ "",
+  date != "" ~ paste(date, "2016", sep = "/"))) 
+```
+
+### source
+
+## Post-processing
+
+Remove the original columns:
+
+```{r}
+distribution %<>% select(-starts_with("raw_"), -country, -date)
+```
+
+Preview data:
+
+```{r}
+head(distribution)
+```
+
+Save to CSV:
+
+```{r}
+write.csv(distribution, file = dwc_distribution_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
+```
+
