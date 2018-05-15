@@ -95,3 +95,23 @@ vdigest <- Vectorize(digest)
 raw_data %<>% mutate(taxonID = paste("rinse-pathways-checklist", "taxon", vdigest (species_clean, algo="md5"), sep=":"))
 ```
 
+## Further pre-processing:
+
+Add prefix `raw_` to all column names to avoid name clashes with Darwin Core terms:
+
+```{r}
+colnames(raw_data) <- paste0("raw_", colnames(raw_data))
+```
+
+Preview data:
+
+```{r}
+raw_data %>% head()
+```
+
+# Create taxon core
+
+```{r start_taxon}
+taxon <- raw_data
+```
+
