@@ -547,3 +547,127 @@ Save to CSV:
 write.csv(species_profile, file = dwc_profile_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
+
+# Create description extension
+
+In the description extension we want to include several important characteristics (hereafter refered to as descriptors) about the species:
+
+- Native range
+- Pathway of introduction
+
+A single taxon can have multiple descriptions of the same type (e.g. multiple native ranges), expressed as multiple rows in the description extension.
+
+For each descriptor, we create a separate dataframe to process the specific information. We always specify _which descriptor_ we map (`type` column) and its _specific content_ (`description` column). After the mapping of these Darwin Core terms `type` and `value`, we merge the dataframes to generate one single description extension. We then continue the mapping process by adding the other Darwin Core terms (which content is independent of the type of descriptor, such as `language`).
+
+```{r}
+description_ext <- raw_data
+```
+
+
+## Native range
+
+```{r}
+native_range <- raw_data
+```
+
+
+```{r}
+native_range %>% distinct(raw_origin)
+```
+
+separate on comma:
+
+```{r}
+native_range %<>% separate(raw_origin, into = paste("origin", c(1:4)))
+```
+
+From wide to long dataset:
+
+```{r}
+native_range %<>% gather("descriptor", "origin", paste("origin", c(1:4)), na.rm = TRUE) 
+```
+
+inspect values:
+
+```{r}
+native_range %>% distinct(origin) 
+```
+
+recode values:
+
+```{r}
+native_range %<>% mutate(native_range = recode(origin,
+  "Aus" = "Australia (WGSRPD:50)",
+  "Au"  = "Australia (WGSRPD:50)",
+  "NAm" = "Northern America (WGSRPD:7)",
+  "As"  = "Asia",
+  "Af"  = "Africa (WGSRPD:2)",
+  "SAm" = "Southern America (WGSRPD:8)",
+  "Eu"  = "Europe (WGSRPD:1)",
+  "Ar"  = "Arctic",
+  "na"  = "",
+  "n"   = "",
+  "d"   = "")) 
+```
+
+Show mapped values:
+
+```{r}
+native_range %>%
+  select(origin, native_range) %>%
+  group_by(origin, native_range) %>%
+  summarize(records = n()) 
+```
+
+Keep only non-empty descriptions:
+
+```{r}
+native_range %<>% filter(!is.na(native_range) & native_range != "")
+```
+
+Create a `type` field to indicate the type of description:
+
+```{r}
+native_range %<>% mutate(type = "native range")
+```
+
+Clean `native_range`:
+
+```{r}
+native_range %<>% select(-descriptor, -origin) 
+```
+
+## Pathway of introduction
+
+```{r}
+pathway_desc <- raw_data
+```
+
+Combi van pathways en vectoren nodig:
+
+```{r}
+pathway_desc %<>% gather("pathway", "value", starts_with("raw_pathway"))
+```
+
+```{r}
+pathway_desc %<>% gather("vector", "value2", starts_with("raw_vector"))
+```
+
+```{r}
+pathway_desc %<>% filter(!(is.na(value) & is.na(value2))) 
+```
+
+```{r}
+with(pathway_desc, which(is.na(value) & !is.na(value2)))
+```
+
+Overview of all possible combinations for pathway and vector:
+
+```{r}
+pathway_desc %>% 
+  select(pathway, vector) %>% 
+  group_by_all() %>% 
+  summarize(records = n())
+```
+
+
