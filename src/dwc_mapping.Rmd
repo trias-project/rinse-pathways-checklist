@@ -80,7 +80,8 @@ Some errors were detected:
 raw_data %<>% mutate(species_clean = case_when(
   species == "Crassostrea rhizophoraeGuilding 1828" ~ "Crassostrea rhizophorae Guilding 1828",
   species == "Petricola pholadiformisLamarck, 1818" ~ "Petricola pholadiformis Lamarck, 1818",
-  species == "Theba pisanaMüller, 1774)" ~ "Theba pisana (Müller, 1774)")) 
+  species == "Theba pisanaMüller, 1774)" ~ "Theba pisana (Müller, 1774)",
+  TRUE ~ species)) 
 ```
 
 ## Generate taxonID
