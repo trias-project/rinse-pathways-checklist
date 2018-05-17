@@ -286,9 +286,14 @@ Apply cleaning functions:
 ```{r}
 literature_references %<>% 
   rowwise() %<>%
-  mutate(references_clean = colon_to_seq(raw_references)) %<>%
-  ungroup() %>%
-  separate_rows(references_clean, sep = ",")
+  mutate(raw_references = colon_to_seq(raw_references)) 
+```
+
+```{r}
+literature_references %<>%
+  mutate(references_sep = raw_references) %<>% 
+  ungroup() %<>%
+  separate_rows(references_sep, sep = ",")
 ```
 
 Import references file:
@@ -300,7 +305,7 @@ compiled_references <- read_excel(path = references, col_types = "text")
 Merge `literature_references` with `compiled_references`:
 
 ```{r}
-literature_references %<>% left_join(compiled_references, by = c("references_clean" = "number"))
+literature_references %<>% left_join(compiled_references, by = c("references_sep" = "number"))
 ```
 
 ## Term mapping
@@ -321,6 +326,12 @@ literature_references %<>% select(-identifier, everything())
 
 ```{r}
 literature_references %<>% mutate(bibliographicCitation = full_reference) 
+```
+
+Keep the link between the `raw_references` and the `identifier` for the mapping of resources in the distribution and extension file.
+
+```{r}
+reference_ID <- literature_references %>% select(taxonID, raw_references, identifier)
 ```
 
 ## Post-processing
@@ -358,6 +369,7 @@ Check wether each record for which `raw_presence_gb` = NA --> raw_first_record_g
 ```{r}
 distribution %>% filter((is.na(raw_established_gb) & !is.na(raw_first_record_gb))) 
 ```
+
 
 ```{r}
 distribution %>% filter((is.na(raw_established_france) & !is.na(raw_first_record_france)))
@@ -508,6 +520,8 @@ distribution %<>% mutate(eventDate = case_when(
 ```
 
 ### source
+
+
 
 ## Post-processing
 
