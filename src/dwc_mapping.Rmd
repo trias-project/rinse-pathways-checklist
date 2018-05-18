@@ -758,11 +758,7 @@ pathway_desc %<>% gather("vector", "value2", starts_with("raw_vector"))
 ```
 
 ```{r}
-pathway_desc %<>% filter(!(is.na(value) & is.na(value2))) 
-```
-
-```{r}
-with(pathway_desc, which(is.na(value) & !is.na(value2)))
+pathway_desc %<>% filter(value == "Y" & value2 == "Y") 
 ```
 
 Overview of all possible combinations for pathway and vector:
