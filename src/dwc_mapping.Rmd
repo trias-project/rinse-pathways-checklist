@@ -13,7 +13,7 @@ output:
     number_sections: true
 ---
 
-This document describes how we map the checklist data to Darwin Core. The source file for this document can be found [here](https://github.com/trias-project/alien-plants-belgium/tree/master/data/raw).
+This document describes how we map the checklist data to Darwin Core. The source file for this document can be found [here](https://github.com/trias-project/rinse-pathways-checklist/tree/master/data/raw).
 
 # Setup
 
@@ -73,17 +73,20 @@ raw_data %<>% remove_empty_rows() %<>%     # Remove empty rows
 
 ## Clean scientific name
 
+Before we assign a taxonID to the scientific names (in `species`), we need to clean the information. We do this stepwise by using the `parsenames()` function provided by rgbif. 
+
 ```{r}
 parsed_names <- parsenames(raw_data $ species)
 ```
 
-Some errors were detected:
+In this checklist, all specificEpithets should be populated. This is not always the case. Some cleaning was required:
 
 ```{r}
 raw_data %<>% mutate(species_clean = case_when(
   species == "Crassostrea rhizophoraeGuilding 1828" ~ "Crassostrea rhizophorae Guilding 1828",
   species == "Petricola pholadiformisLamarck, 1818" ~ "Petricola pholadiformis Lamarck, 1818",
   species == "Theba pisanaMüller, 1774)" ~ "Theba pisana (Müller, 1774)",
+  species == "Maylandia sp. M. K. Meyer & W. Förster, 1984" ~ "Maylandia M. K. Meyer & W. Förster, 1984",
   TRUE ~ species)) 
 ```
 
