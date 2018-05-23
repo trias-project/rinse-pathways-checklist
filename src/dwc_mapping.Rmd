@@ -285,15 +285,19 @@ write.csv(taxon, file = dwc_taxon_file, na = "", row.names = FALSE, fileEncoding
 
 # Create literature reference extension
 
-Map the data to [Literature References](http://rs.gbif.org/extension/gbif/1.0/references.xml).
-
 ```{r}
 literature_references <- raw_data
 ```
 
 ## Pre-processing
 
-Clean `raw_references`: 
+Information for the literature references is contained in `raw_references`, which are numbers. The link between these numbers and the full references is provided in the [Supplementary material file](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/10530_2016_1278_MOESM2_ESM.docx). We copy-pasted this information in a separated excel file (with some basic cleaning):
+
+```{r}
+compiled_references <- read_excel(path = references, col_types = "text")
+```
+
+To merge the full references in `compiled references` with the reference numbers provided in `raw_references` (using the field `identifier`), we need to clean and separate`raw_references` first. Concretely, we aim to provide **all** reference numbers in `raw_references`, instead of using the format containing `-` for a range of numbers between a delimited minimun and maximum (e.g. 3-7 is transformed to 3,4,5,6,7). To accomplish this, we first generate the function `colon_to_seq()`:
 
 ```{r}
 colon_to_seq <- function(input){
@@ -318,6 +322,8 @@ literature_references %<>%
   mutate(raw_references = colon_to_seq(raw_references)) 
 ```
 
+In a second step, we transform `literature_references` from a wide to a long dataset, with each row containing one reference number per taxon:
+
 ```{r}
 literature_references %<>%
   mutate(references_sep = raw_references) %<>% 
@@ -325,49 +331,56 @@ literature_references %<>%
   separate_rows(references_sep, sep = ",")
 ```
 
-Import references file:
-
-```{r}
-compiled_references <- read_excel(path = references, col_types = "text")
-```
-
-Merge `literature_references` with `compiled_references`:
+Merge `literature_references` with `compiled_references` to link the reference number with the full reference:
 
 ```{r}
 literature_references %<>% left_join(compiled_references, by = c("references_sep" = "number"))
 ```
 
-Generate dataframe `identifier` with one column containing the full combination of identifiers:
+This dataframe constitutes the basis for further mapping of the literature reference extension. 
+
+For the mapping of the other extensions, we need to translate the sequence of reference numbers given for each taxon in `raw_references` into a sequence of all identifiers corresponding to these specific numbers, separated by `|`. We generate this sequence here, link it with `raw_references` and save it as the dataframe `identifier_sequence`. 
+
+Generate dataframe `identifier_sequence` with the required columns: 
 
 ```{r}
-identifiers <- literature_references %>% select(raw_taxonID, raw_references,references_sep, identifier) %>% mutate(references_sep = as.numeric(references_sep))
+identifier_sequence <- literature_references %>% select(raw_taxonID, raw_references, references_sep, identifier)
 ```
 
+To generate the required sequence of identifiers, we need to transform the dataset from one containing one identifier per taxon per row, to one containing a sequence of identifiers per taxon per row. We do this by using the `spread()`function first, generating 33 identifier columns, corresponding to the 33 identifiers: 
+
 ```{r}
-identifiers %<>% spread(references_sep, identifier) %<>% select(-`<NA>`)
+identifier_sequence %<>% mutate(references_sep = as.numeric(references_sep)) %<>% 
+  spread(references_sep, identifier) %<>%
+  select(-`<NA>`)
 ```
+
+In the following step, we unite these 33 columns into one field `id_sequence`, using `|` as a separator.
+To efficiently unite the identifier columns (`1-33`), we need to rename the column names by adding the prefix `ref`:
 
 ```{r}
 old_names <- c("raw_taxonID", "raw_references", c(1:33))
 new_names <- c("raw_taxonID", "raw_references", paste("ref", c(1:33), sep = ":"))
+identifier_sequence %<>% rename_at(vars(old_names), ~ new_names) 
 ```
 
+Unite the 33 identifier columns into `id_sequence`:
 
 ```{r}
-identifiers %<>% rename_at(vars(old_names), ~ new_names) 
+identifier_sequence %<>% unite("id_sequence", c(paste("ref", c(1:33), sep = ":")), sep = " | ")
 ```
 
-
-```{r}
-identifiers %<>% unite("id_united", c(paste("ref", c(1:33), sep = ":")), sep = " | ")
-```
+Remove `NA`'s from the generated sequences:
 
 ```{r}
-identifiers %<>% mutate(id_united = str_replace_all(id_united, "(([NA]{2}\\s[|]) | [|]\\s([NA]{2}))", ""))
+identifier_sequence %<>% mutate(id_sequence = str_replace_all(id_sequence, "(([NA]{2}\\s[|]) | [|]\\s([NA]{2}))", ""))
 ```
+
+We will use this dataframe to link the sequence of references numbers with the sequence of identifiers in the mapping of the following extensions.
 
 ## Term mapping
 
+Map the data to [Literature References](http://rs.gbif.org/extension/gbif/1.0/references.xml).
 ### taxonID
 
 ```{r}
