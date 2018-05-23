@@ -421,70 +421,44 @@ write.csv(literature_references, file = dwc_literature_references_file, na = "",
 
 # Create distribution extension
 
-Map the data to [Species Distribution](http://rs.gbif.org/extension/gbif/1.0/distribution.xml).
-
-```{r}
+```{r start_distribution}
 distribution <- raw_data
 ```
 
 ### pre-processing
 
-Check wether each record for which `raw_presence_gb` = NA --> raw_first_record_gb = NA
+Information for the distributions and dates is contained in eight columns in total: 4 columns for the distribution information (Great Brittain, France, Belgium and the Netherlands in resp. `raw_established_gb`, `raw_established_france`, `raw_established_belgium` and `raw_established_netherlands`) and 4 columns for the first record of the taxon in these countries (resp. `raw_first_record_gb`, `raw_first_record_france`, `raw_first_record_belgium` and `raw_first_record_netherlands`). When a taxon is present in a country, this is indicated by a `Y` and a first record is provided. 
 
-```{r}
-distribution %>% filter((is.na(raw_established_gb) & !is.na(raw_first_record_gb))) 
-```
+We need to transform the information in these columns into two columns: one with country presence information (`country column`, future `locality`, `locationID` and `countryCode`) and one with the date of first observance (`date` column, future `eventDate`). We do this in three steps:
 
-
-```{r}
-distribution %>% filter((is.na(raw_established_france) & !is.na(raw_first_record_france)))
-```
-
-```{r}
-distribution %>% filter((is.na(raw_established_belgium) & !is.na(raw_first_record_belgium)))
-```
-
-```{r}
-distribution %>% filter((is.na(raw_established_netherlands) & !is.na(raw_first_record_netherlands)))
-```
-
-Paste date and establishment information for each country:
+1. Paste date and establishment information for each country into one column:
 
 ```{r}
 distribution %<>% mutate(record_gb = paste(raw_established_gb, raw_first_record_gb, sep = ",")) 
-```
-
-```{r}
-distribution %<>% mutate(record_fr = paste(raw_established_france, raw_first_record_france, sep = ",")) 
-```
-
-```{r}
+distribution %<>% mutate(record_fr = paste(raw_established_france, raw_first_record_france, sep = ","))
 distribution %<>% mutate(record_be = paste(raw_established_belgium, raw_first_record_belgium, sep = ",")) 
-```
-
-```{r}
 distribution %<>% mutate(record_nl = paste(raw_established_netherlands, raw_first_record_netherlands, sep = ",")) 
 ```
 
-Frow wide to long dataset:
+2. Generate `country` and `date`:
 
 ```{r}
 distribution %<>% gather("country", "date", record_gb, record_fr, record_be, record_nl) 
 ```
 
-Remove records with `NA,NA`:
+3. Remove records with `NA,NA`:
 
 ```{r}
 distribution %<>% filter(date != "NA,NA") 
 ```
 
-Clean `data`:
+Clean `date`:
 
 ```{r}
 distribution %<>% mutate(date = str_replace_all(date, "Y,", "")) 
 ```
 
-Rename `country`:
+Rename records in `country`:
 
 ```{r}
 distribution %<>% mutate(country = recode(country,
@@ -494,7 +468,9 @@ distribution %<>% mutate(country = recode(country,
   "record_nl" = "The Netherlands"))
 ```
 
-## Term mapping
+## Term 
+
+Map the data to [Species Distribution](http://rs.gbif.org/extension/gbif/1.0/distribution.xml).
 
 ### taxonID
 
