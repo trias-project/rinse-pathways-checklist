@@ -164,9 +164,13 @@ taxon %<>% mutate(scientificName = raw_species_clean)
 
 ### kingdom
 
+Information for the higher classification is contained in `raw_higher_classification`:
+
 ```{r}
 taxon %>% distinct(raw_higher_classification)
 ```
+
+These map to different taxonomical levels (e.g. `Mammalia` = class while `Osteichthyes` = order). We interpret this information in the mapping of `kingdom`, `phylum`, `class` and `order`. However, not all classification information could be mapped to these Darwin Core terms, e.g. Angiosperms are currently considered to be unranked. For this group, we use the Darwin Core terms `higherClassification`.
 
 ```{r}
 taxon %<>% mutate(kingdom = case_when(
@@ -189,6 +193,7 @@ taxon %<>% mutate(phylum = case_when(
 taxon %<>% mutate(class = case_when(
   raw_higher_classification == "Anseriformes" ~ "Aves",
   raw_higher_classification == "Mammalia" ~ "Mammalia",
+  raw_higher_classification == "Osteichthyes" ~ "Actinopterygii",  # Osteichthyes is an unaccepted synonym
   TRUE ~ "")) 
 ```
 
@@ -206,35 +211,56 @@ taxon %<>% mutate(order = case_when(
 taxon %<>% mutate(higherClassification = case_when(
   raw_higher_classification == "Angiospermae" ~ paste(kingdom, raw_higher_classification, sep = " | "),
   raw_higher_classification == "Mollusca" ~ paste(kingdom, phylum, sep = " | "),
-  raw_higher_classification == "Osteichthyes" ~ paste(kingdom, phylum, raw_higher_classification, sep = " | "),
+  raw_higher_classification == "Osteichthyes" ~ paste(kingdom, phylum, class, sep = " | "),
   raw_higher_classification == "Anseriformes" ~ paste(kingdom, phylum, class, order, sep = " | "),
   raw_higher_classification == "Mammalia" ~ paste(kingdom, phylum, class, sep = " | "))) 
 ```
 
 ### taxonRank
 
+The information for `taxonRank` can be provided by the nameparser() function of rgbif. We generate it here and add the information to `taxon`:
+
 ```{r}
 taxonRank <- parsenames(taxon $ raw_species_clean)
 ```
+
+Select taxonRank information (in `rankmarker`). The field `notho` contains valuable information for the generic hybrids, so this column is selected as well. 
 
 ```{r}
 taxonRank %<>% select(scientificname, rankmarker, notho) 
 ```
 
+Merge `taxonRank` with `taxon`:
+
 ```{r}
 taxon %<>% left_join(taxonRank, by = c("raw_species_clean" = "scientificname")) 
 ```
 
+Show unique values for `rankmarker`:
+
 ```{r}
-taxon %>% distinct(rankmarker) 
+taxon %>% select(rankmarker, notho) %>% 
+  group_by_all() %>% 
+  summarise(records = n())
 ```
+
+Show scientificNames for which rankmarker = NA:
+
+```{r}
+taxon %>% select(scientificName, rankmarker) %>% 
+  filter(is.na(rankmarker))
+```
+
+`Maylandia M. K. Meyer & W. Förster, 1984` is a genus, the other two records are species.
+Map `taxonRank`:
 
 ```{r}
 taxon %<>% mutate(taxonRank = case_when(
-  !is.na(notho) ~ "",
+  !is.na(notho) ~ "hybrid",
   rankmarker == "sp." & is.na(notho) ~ "species",
   rankmarker == "infrasp." ~ "subspecies",
-  is.na(rankmarker) ~ "species")) 
+  is.na(rankmarker) & scientificName != "Maylandia M. K. Meyer & W. Förster, 1984" ~ "species",
+  scientificName == "Maylandia M. K. Meyer & W. Förster, 1984" ~ "genus")) 
 ```
 
 ## Post-processing
