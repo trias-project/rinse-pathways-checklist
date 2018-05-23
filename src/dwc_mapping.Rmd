@@ -308,6 +308,35 @@ Merge `literature_references` with `compiled_references`:
 literature_references %<>% left_join(compiled_references, by = c("references_sep" = "number"))
 ```
 
+Generate dataframe `identifier` with one column containing the full combination of identifiers:
+
+```{r}
+identifiers <- literature_references %>% select(raw_taxonID, raw_references,references_sep, identifier) %>% mutate(references_sep = as.numeric(references_sep))
+```
+
+```{r}
+identifiers %<>% spread(references_sep, identifier) %<>% select(-`<NA>`)
+```
+
+```{r}
+old_names <- c("raw_taxonID", "raw_references", c(1:33))
+new_names <- c("raw_taxonID", "raw_references", paste("ref", c(1:33), sep = ":"))
+```
+
+
+```{r}
+identifiers %<>% rename_at(vars(old_names), ~ new_names) 
+```
+
+
+```{r}
+identifiers %<>% unite("id_united", c(paste("ref", c(1:33), sep = ":")), sep = " | ")
+```
+
+```{r}
+identifiers %<>% mutate(id_united = str_replace_all(id_united, "(([NA]{2}\\s[|]) | [|]\\s([NA]{2}))", ""))
+```
+
 ## Term mapping
 
 ### taxonID
@@ -328,18 +357,12 @@ literature_references %<>% select(-identifier, everything())
 literature_references %<>% mutate(bibliographicCitation = full_reference) 
 ```
 
-Keep the link between the `raw_references` and the `identifier` for the mapping of resources in the distribution and extension file.
-
-```{r}
-reference_ID <- literature_references %>% select(taxonID, raw_references, identifier)
-```
-
 ## Post-processing
 
 Remove the original columns:
 
 ```{r}
-literature_references %<>% select(-starts_with("raw_"), -references_clean, -full_reference)
+literature_references %<>% select(-starts_with("raw_"), -references_sep, -full_reference)
 ```
 
 Preview data:
@@ -770,4 +793,7 @@ pathway_desc %>%
   summarize(records = n())
 ```
 
+```{r}
+pathway_desc %>% filter(pathway == "raw_pathway_import_relaese" & vector == "raw_vector_research1")
+```
 
