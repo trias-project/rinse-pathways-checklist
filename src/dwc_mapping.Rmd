@@ -319,14 +319,14 @@ Apply cleaning functions:
 ```{r}
 literature_references %<>% 
   rowwise() %<>%
-  mutate(raw_references = colon_to_seq(raw_references)) 
+  mutate(raw_references_clean = colon_to_seq(raw_references)) 
 ```
 
 In a second step, we transform `literature_references` from a wide to a long dataset, with each row containing one reference number per taxon:
 
 ```{r}
 literature_references %<>%
-  mutate(references_sep = raw_references) %<>% 
+  mutate(references_sep = raw_references_clean) %<>% 
   ungroup() %<>%
   separate_rows(references_sep, sep = ",")
 ```
@@ -341,7 +341,7 @@ This dataframe constitutes the basis for further mapping of the literature refer
 
 For the mapping of the other extensions, we need to translate the sequence of reference numbers given for each taxon in `raw_references` into a sequence of all identifiers corresponding to these specific numbers, separated by `|`. We generate this sequence here, link it with `raw_references` and save it as the dataframe `identifier_sequence`. 
 
-Generate dataframe `identifier_sequence` with the required columns: 
+Generate dataframe `identifier_sequence` with the required columns (add taxonID as this is necessary for implying the spread() function): 
 
 ```{r}
 identifier_sequence <- literature_references %>% select(raw_taxonID, raw_references, references_sep, identifier)
@@ -374,6 +374,18 @@ Remove `NA`'s from the generated sequences:
 
 ```{r}
 identifier_sequence %<>% mutate(id_sequence = str_replace_all(id_sequence, "(([NA]{2}\\s[|]) | [|]\\s([NA]{2}))", ""))
+```
+
+Remove `raw_taxonID`:
+
+```{r}
+identifier_sequence %<>% select(-raw_taxonID) 
+```
+
+Remove duplicate rows:
+
+```{r}
+identifier_sequence %<>% distinct(raw_references, .keep_all = TRUE)
 ```
 
 We will use this dataframe to link the sequence of references numbers with the sequence of identifiers in the mapping of the following extensions.
@@ -427,35 +439,29 @@ distribution <- raw_data
 
 ### pre-processing
 
-Information for the distributions and dates is contained in eight columns in total: 4 columns for the distribution information (Great Brittain, France, Belgium and the Netherlands in resp. `raw_established_gb`, `raw_established_france`, `raw_established_belgium` and `raw_established_netherlands`) and 4 columns for the first record of the taxon in these countries (resp. `raw_first_record_gb`, `raw_first_record_france`, `raw_first_record_belgium` and `raw_first_record_netherlands`). When a taxon is present in a country, this is indicated by a `Y` and a first record is provided. 
+Information for the distributions and associated dates of first observation is contained in eight columns in total: 4 columns for the distribution information (Great Brittain, France, Belgium and the Netherlands in resp. `raw_established_gb`, `raw_established_france`, `raw_established_belgium` and `raw_established_netherlands`) and 4 columns for the first record of the taxon in these countries (resp. `raw_first_record_gb`, `raw_first_record_france`, `raw_first_record_belgium` and `raw_first_record_netherlands`). When a taxon is present in a country, this is indicated by a `Y` and a date of first record is provided. 
 
-We need to transform the information in these columns into two columns: one with country presence information (`country column`, future `locality`, `locationID` and `countryCode`) and one with the date of first observance (`date` column, future `eventDate`). We do this in three steps:
+We need to reduce the information to two columns: one with country presence information (`country column`, basis for mapping of `locality`, `locationID` and `countryCode`) and one with the date of first observance (`date` column, basis for mapping of `eventDate`). We do this in three steps:
 
 1. Paste date and establishment information for each country into one column:
 
 ```{r}
-distribution %<>% mutate(record_gb = paste(raw_established_gb, raw_first_record_gb, sep = ",")) 
-distribution %<>% mutate(record_fr = paste(raw_established_france, raw_first_record_france, sep = ","))
-distribution %<>% mutate(record_be = paste(raw_established_belgium, raw_first_record_belgium, sep = ",")) 
-distribution %<>% mutate(record_nl = paste(raw_established_netherlands, raw_first_record_netherlands, sep = ",")) 
+distribution %<>% mutate(record_gb = paste(raw_established_gb, raw_first_record_gb, sep = ","))  %<>% 
+  mutate(record_fr = paste(raw_established_france, raw_first_record_france, sep = ",")) %<>% 
+  mutate(record_be = paste(raw_established_belgium, raw_first_record_belgium, sep = ",")) %<>%
+  mutate(record_nl = paste(raw_established_netherlands, raw_first_record_netherlands, sep = ",")) 
 ```
 
-2. Generate `country` and `date`:
+2. Generate `country` and `date` by gathering the new columns:
 
 ```{r}
 distribution %<>% gather("country", "date", record_gb, record_fr, record_be, record_nl) 
 ```
 
-3. Remove records with `NA,NA`:
+3. Remove records with `NA,NA` (not present in the country and thus no date information) and the date information by removing `Y`:
 
 ```{r}
-distribution %<>% filter(date != "NA,NA") 
-```
-
-Clean `date`:
-
-```{r}
-distribution %<>% mutate(date = str_replace_all(date, "Y,", "")) 
+distribution %<>% filter(date != "NA,NA") %<>% mutate(date = str_replace_all(date, "Y,", "")) 
 ```
 
 Rename records in `country`:
@@ -468,7 +474,7 @@ distribution %<>% mutate(country = recode(country,
   "record_nl" = "The Netherlands"))
 ```
 
-## Term 
+## Term mapping
 
 Map the data to [Species Distribution](http://rs.gbif.org/extension/gbif/1.0/distribution.xml).
 
@@ -482,7 +488,7 @@ distribution %<>% mutate(taxonID = raw_taxonID)
 
 ```{r}
 distribution %<>% mutate(locationID = case_when(
-   country == "Great Britain" ~ "ISO_3166-2:GB",
+   country == "Great Britain" ~ " WGSRPD:GRB ",
    country == "France" ~ "ISO_3166-2:FR",
    country == "Belgium" ~ "ISO_3166-2:BE",
    country == "The Netherlands" ~ "ISO_3166-2:NL"))
@@ -524,15 +530,16 @@ Inspect dates:
 distribution %>% distinct(date) %>% arrange(date)
 ```
 
-Clean whitespace information:
+Check whether date information deviates from the required ISO 8601 format(here `YYYY`)
 
 ```{r}
 unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
 ```
 
+We clean these dates:
 
 ```{r}
-distribution %<>% mutate(date = str_trim(date)) 
+distribution %<>% mutate(date = str_trim(date)) # remove whitespaces
 ```
 
 
@@ -548,11 +555,13 @@ distribution %<>% mutate(date = recode(date,
    "19204" = "1904")) 
 ```
 
+After this cleaning step, there should be no deviations from the ISO 8601 format:
+
 ```{r}
 unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
 ```
 
-Make date range:
+We want to express `eventDate` as the range between the date of first and last record. In this case, we don't have information about the last record. We'll consider the publication year of Zieritz et al. (2016) as the date when the presence of the species was last verified:
 
 ```{r}
 distribution %<>% mutate(eventDate = case_when(
@@ -562,7 +571,17 @@ distribution %<>% mutate(eventDate = case_when(
 
 ### source
 
+Information about the source is provided in `raw_references`. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe `identifier_checklist` generated earlier.
 
+```{r}
+distribution %<>% left_join(identifier_sequence, by = ("raw_references"))
+```
+
+Rename `id_sequence`:
+
+```{r}
+distribution %<>%  rename("source" = "id_sequence")
+```
 
 ## Post-processing
 
@@ -571,6 +590,8 @@ Remove the original columns:
 ```{r}
 distribution %<>% select(-starts_with("raw_"), -country, -date)
 ```
+
+
 
 Preview data:
 
