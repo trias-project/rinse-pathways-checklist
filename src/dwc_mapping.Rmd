@@ -605,16 +605,6 @@ Save to CSV:
 write.csv(distribution, file = dwc_distribution_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
-# Create resource relationship extension
-
-```{r start_resource_relationship}
-resource_relationship <- raw_data
-```
-
-## Term mapping
-
-Map the data to [Resource Relationship](http://rs.gbif.org/extension/dwc/resource_relation_2018_01_18.xml).
-
 # Create species profile extension
 
 In this extension will express broad habitat characteristics (e.g. `isTerrestrial`) of the species.
@@ -629,8 +619,9 @@ Show unique values:
 
 ```{r}
 species_profile %>%
-  distinct(raw_environment) %>%
-  arrange(raw_environment)
+  select(raw_environment) %>%
+  group_by_all() %>% 
+  summarize(records = n())
 ```
 
 We map this information respectively to `isFreshwater`, `isTerrestrial`, `isMarine` or a combination of these terms in the species profile extension.
@@ -650,8 +641,8 @@ species_profile %<>% mutate(taxonID = raw_taxonID)
 ```{r}
 species_profile %<>% mutate(isMarine = case_when(
   raw_environment == "M" |
-    raw_environment == "M+F" |
-    raw_environment == "T+M" ~ "TRUE",
+  raw_environment == "M+F" |
+  raw_environment == "T+M" ~ "TRUE",
   TRUE ~ "FALSE"
 ))
 ```
@@ -661,9 +652,9 @@ species_profile %<>% mutate(isMarine = case_when(
 ```{r}
 species_profile %<>% mutate(isFreshwater = case_when(
   raw_environment == "F" |
-    raw_environment == "F,T" |
-    raw_environment == "F+T" |
-    raw_environment == "M+F" ~ "TRUE",
+  raw_environment == "F,T" |
+  raw_environment == "F+T" |
+  raw_environment == "M+F" ~ "TRUE",
   TRUE ~ "FALSE"))
 ```
 
@@ -672,9 +663,9 @@ species_profile %<>% mutate(isFreshwater = case_when(
 ```{r}
 species_profile %<>% mutate(isTerrestrial = case_when(
   raw_environment == "F,T" |
-    raw_environment == "F+T" |
-    raw_environment == "T" |
-    raw_environment == "T+M" ~ "TRUE",
+  raw_environment == "F+T" |
+  raw_environment == "T" |
+  raw_environment == "T+M" ~ "TRUE",
   TRUE ~"FALSE"))
 ```
 
