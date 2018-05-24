@@ -878,29 +878,51 @@ pathway_desc %>%
   summarize(records = n())
 ```
 
-For pathways with value `raw_pathway_disperal` and `raw_pathway_accidental`, we will not provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2016). 
+All available pathway information will be mapped to the six main categories of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). Vector information for which we have pathway information will be mapped to the subcategories of the CBD standard, but **only in certain cases**. For pathways `raw_pathway_disperal` and `raw_pathway_accidental`, we will **not** provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2016). For pathways `raw_pathway_import_escape` and `raw_pathway_import_release` , we will map vector information to the CBD standard **only** when they map unambigiously to one single CBD term (see also [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3). For vectors without pathway information, we will only map the information to CBD categories/subcategories when the link is straigtforward.
 
-Pathways `raw_pathway_import_escape` and `raw_pathway_import_release` will be mapped to the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf), using the main six CBD categories:
-
-RINSE terminology | CBD category
---- |---
-accidental | stowaway
-accidental | contaminant
-dispersal | corridor
-dispersal | unaided
-import_escape | escape
-import_release | release
-
-
-Vector information **for these pathways** will mapped to the subcategories of the CBD standard, **only** when they map unambigiously to one single term (see also [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3):
-
-pathway | value | CBD category | CBD subcategory
+RINSE pathway | RINSE vector | CBD category | CBD subcategory
 --- | --- | --- | ---
-import_escape | biocontrol | escape | 
-import_escape | industry | escape |
+accidental | biocontrol | stowaway | NA
+accidental | industry | stowaway | NA
+accidental | leisure | stowaway | NA
+accidental | ornamental | stowaway | NA
+accidental | research | stowaway | NA
+
+accidental | biocontrol | contaminant | NA
+accidental | industry | contaminant | NA
+accidental | leisure | contaminant | NA
+accidental | ornamental | contaminant | NA
+accidental | research | contaminant | NA
+
+dispersal | biocontrol | corridor | NA
+dispersal | industry | corridor | NA
+dispersal | leisure | corridor | NA
+dispersal | ornamental | corridor | NA
+dispersal | research | corridor | NA
+
+dispersal | biocontrol | unaided | NA
+dispersal | industry | unaided| NA
+dispersal | leisure | unaided | NA
+dispersal | ornamental | unaided| NA
+dispersal | research | unaided | NA
+
+import_escape | biocontrol | escape | NA
+import_escape | industry | escape | NA
 import_escape | leisure | escape | live food and bait
-import_escape | ornamental | escape | 
-import_escape | research | escape | 
+import_escape | ornamental | escape | NA 
+import_escape | research | escape | Research and ex-situ breeding (in facilities)
+
+import_release | biocontrol | release  | biological control
+import_release | industry | release | NA
+import_release | leisure | release | NA
+import_release | ornamental | release | NA
+import_release | research | release | NA
+
+NA | biocontrol | release | biological control
+NA | industry | |
+NA | leisure | |
+NA | ornamental | | 
+NA | research | escape | biological control
 
 We map this information in the new column `description`
 
@@ -908,9 +930,18 @@ We map this information in the new column `description`
 pathway_desc %>% mutate(description = case_when(
   pathway == "raw_pathway_accidental" & !is.na(pathway_value) ~ "stowaway | contaminant",
   pathway == "raw_pathway_dispersal" & !is.na(pathway_value) ~ "dispersal | unaided",
-  pathway == "raw_pathway_import_escape" & vector == "raw_vector_leisure" & vector_value == "Y" ~ "escape_food_bait",
-  pathway == "raw_pathway_import_escape" & vector == "raw_vector_leisure" & is.na(vector_value) ~ "escape",
-  pathway == "raw_pathway_import_escape" & vector != "raw_vector_leisure"  ~ "escape"
-)) %>% View()
+  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & vector_value == "Y" ~ "escape_food_bait",
+  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & is.na(vector_value) ~ "escape",
+  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector != "raw_vector_leisure"  ~ "escape",
+  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_research" & vector_value == "Y" ~ "escape_research",
+  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_research" & is.na(vector_value) ~ "escape",
+  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector != "raw_vector_research" ~ "escape",
+  pathway == "raw_pathway_import_release" & !is.na(pathway_value) & vector == "raw_vector_biocontrol" & vector_value == "Y" ~ "release_biocontrol",
+  pathway == "raw_pathway_import_release" & !is.na(pathway_value) & vector == "raw_vector_biocontrol" & is.na(vector_value) ~ "release",
+  pathway == "raw_pathway_import_release" & !is.na(pathway_value) & vector != "raw_vector_biocontrol" ~ "release",
+  is.na(pathway_value) & vector == "raw_vector_biocontrol" ~ "release_biocontrol",
+  is.na(pathway_value) & vector == "raw_vector_research" ~ "escape_biocontrol")) %>% View()
 ```
 
+
+ 
