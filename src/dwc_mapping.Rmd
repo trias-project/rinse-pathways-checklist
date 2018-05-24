@@ -624,6 +624,9 @@ species_profile %>%
   summarize(records = n())
 ```
 
+Two taxa have no information on the environment, i.e. `Salvelinus fontalis` and `Rattus norvegicus`. 
+`Salvelinus fontinalis` (brook trout) is fish found in both freshwater and marine habitats, while `Rattus norvegicus`(brown rat) is a terrestrial species. We add this information ourslves
+
 We map this information respectively to `isFreshwater`, `isTerrestrial`, `isMarine` or a combination of these terms in the species profile extension.
 
 ## Term mapping
@@ -642,7 +645,8 @@ species_profile %<>% mutate(taxonID = raw_taxonID)
 species_profile %<>% mutate(isMarine = case_when(
   raw_environment == "M" |
   raw_environment == "M+F" |
-  raw_environment == "T+M" ~ "TRUE",
+  raw_environment == "T+M" | 
+  raw_species == "Salvelinus fontinalis (Mitchill, 1814)" ~ "TRUE",
   TRUE ~ "FALSE"
 ))
 ```
@@ -654,7 +658,8 @@ species_profile %<>% mutate(isFreshwater = case_when(
   raw_environment == "F" |
   raw_environment == "F,T" |
   raw_environment == "F+T" |
-  raw_environment == "M+F" ~ "TRUE",
+  raw_environment == "M+F" |
+  raw_species == "Salvelinus fontinalis (Mitchill, 1814)" ~ "TRUE",
   TRUE ~ "FALSE"))
 ```
 
@@ -665,7 +670,8 @@ species_profile %<>% mutate(isTerrestrial = case_when(
   raw_environment == "F,T" |
   raw_environment == "F+T" |
   raw_environment == "T" |
-  raw_environment == "T+M" ~ "TRUE",
+  raw_environment == "T+M" |
+  raw_species == "Rattus norvegicus (Berkenhout 1769)" ~ "TRUE",
   TRUE ~"FALSE"))
 ```
 
@@ -712,67 +718,70 @@ In the description extension we want to include several important characteristic
 - Native range
 - Pathway of introduction
 
-A single taxon can have multiple descriptions of the same type (e.g. multiple native ranges), expressed as multiple rows in the description extension.
-
-For each descriptor, we create a separate dataframe to process the specific information. We always specify _which descriptor_ we map (`type` column) and its _specific content_ (`description` column). After the mapping of these Darwin Core terms `type` and `value`, we merge the dataframes to generate one single description extension. We then continue the mapping process by adding the other Darwin Core terms (which content is independent of the type of descriptor, such as `language`).
-
-```{r}
-description_ext <- raw_data
-```
-
+A single taxon can have multiple descriptions of the same type (e.g. multiple native ranges), expressed as multiple rows in the description extension.For each descriptor, we create a separate dataframe to process the specific information. We always specify _which descriptor_ we map (`type` column) and its _specific content_ (`description` column). After the mapping of these Darwin Core terms `type` and `value`, we merge the dataframes to generate one single description extension. We then continue the mapping process by adding the other Darwin Core terms (which content is independent of the type of descriptor, such as `language`).
 
 ## Native range
+
+Native range information (e.g. `Australia`) can be found in `raw_origin`. 
+
+Create separate dataframe:
 
 ```{r}
 native_range <- raw_data
 ```
 
+Show unique values:
 
 ```{r}
-native_range %>% distinct(raw_origin)
+native_range %>% 
+  distinct(raw_origin) %>% 
+  arrange(raw_origin)
 ```
 
-separate on comma:
+`raw_origin` contains multiple values (currently not more than 4), so we separate it in 4 columns:
 
 ```{r}
-native_range %<>% separate(raw_origin, into = paste("origin", c(1:4)))
+native_range %<>% separate(raw_origin, into = paste("origin", c(1:4), sep = "_"))
 ```
 
-From wide to long dataset:
-
+Gather in a `key` and `value` column:
+ 
 ```{r}
-native_range %<>% gather("descriptor", "origin", paste("origin", c(1:4)), na.rm = TRUE) 
+native_range %<>% gather("key", "value", paste("origin", c(1:4), sep = "_"), na.rm = TRUE) 
 ```
 
 inspect values:
 
 ```{r}
-native_range %>% distinct(origin) 
+native_range %>% 
+  distinct(value) %>% 
+  arrange(value)
 ```
 
-recode values:
+Map values:
 
 ```{r}
-native_range %<>% mutate(native_range = recode(origin,
-  "Aus" = "Australia (WGSRPD:50)",
-  "Au"  = "Australia (WGSRPD:50)",
-  "NAm" = "Northern America (WGSRPD:7)",
-  "As"  = "Asia",
+native_range %<>% mutate(mapped_value = recode(value,
   "Af"  = "Africa (WGSRPD:2)",
-  "SAm" = "Southern America (WGSRPD:8)",
-  "Eu"  = "Europe (WGSRPD:1)",
   "Ar"  = "Arctic",
-  "na"  = "",
+  "As"  = "Asia",
+  "Au"  = "Australia (WGSRPD:50)",
+  "Aus" = "Australia (WGSRPD:50)",
+  "d"   = "",
+  "Eu"  = "Europe (WGSRPD:1)",
   "n"   = "",
-  "d"   = "")) 
+  "na"  = "",
+  "NAm" = "Northern America (WGSRPD:7)",
+  "SAm" = "Southern America (WGSRPD:8)"
+)) 
 ```
 
 Show mapped values:
 
 ```{r}
 native_range %>%
-  select(origin, native_range) %>%
-  group_by(origin, native_range) %>%
+  select(value, mapped_value) %>%
+  group_by(value, mapped_value) %>%
   summarize(records = n()) 
 ```
 
@@ -782,16 +791,18 @@ Keep only non-empty descriptions:
 native_range %<>% filter(!is.na(native_range) & native_range != "")
 ```
 
+Drop the `key` and `value` columns and rename `mapped_value` as `description`:
+
+```{r}
+native_range %<>%
+  select(-key, -value) %>%
+  rename(description = mapped_value)
+```
+
 Create a `type` field to indicate the type of description:
 
 ```{r}
 native_range %<>% mutate(type = "native range")
-```
-
-Clean `native_range`:
-
-```{r}
-native_range %<>% select(-descriptor, -origin) 
 ```
 
 ## Pathway of introduction
