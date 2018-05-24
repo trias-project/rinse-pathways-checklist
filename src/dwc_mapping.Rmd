@@ -923,8 +923,8 @@ We map this information in the new column `description`
 
 ```{r}
 pathway_desc %<>% mutate(description = case_when(
-  pathway == "raw_pathway_accidental" & !is.na(pathway_value) ~ "stowaway | contaminant",
-  pathway == "raw_pathway_dispersal" & !is.na(pathway_value) ~ "dispersal | unaided",
+  pathway == "raw_pathway_accidental" & !is.na(pathway_value) ~ "stowaway,contaminant",
+  pathway == "raw_pathway_dispersal" & !is.na(pathway_value) ~ "dispersal,unaided",
   pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & vector_value == "Y" ~ "escape_food_bait",
   pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & is.na(vector_value) ~ "escape",
   pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector != "raw_vector_leisure"  ~ "escape",
@@ -937,5 +937,122 @@ pathway_desc %<>% mutate(description = case_when(
   is.na(pathway_value)  ~ ""))
 ```
 
+Separate `description` when more than two values are provided, i.e. in case of `pathway = accidental` or `pathway = dispersal`:
 
+```{r}
+pathway_desc %<>% separate_rows(description, sep = ",")
+```
+
+Remove all empty description values:
+
+```{r}
+pathway_desc %<>% filter(description != "") 
+```
+
+Remove duplicate rows:
+
+```{r}
+pathway_desc %<>% distinct(raw_taxonID, description, .keep_all = TRUE)
+```
+
+Remove `pathway_provided`, `vector_provided`, `pathway`, `vector`, `pathway_value` and `vector_value`:
+
+```{r}
+pathway_desc %<>% select(-c(pathway_provided, vector_provided, pathway, vector, pathway_value, vector_value)) 
+```
+
+Add the prefix `cbd_2014_pathway:` to refer to this standard:
+
+```{r}
+pathway_desc %<>% mutate(description = paste ("cbd_2014_pathway", description, sep = ":"))
+```
+
+Create a `type` field to indicate the type of description:
+
+```{r}
+pathway_desc %<>% mutate(type = "pathway")
+```
+
+## Union descriptions
+
+Union native range and pathway of introduction:
+
+```{r start_description_ext}
+description_ext <- bind_rows(native_range, pathway_desc)
+```
+
+## Term mapping
  
+Map the data to [Taxon Description](http://rs.gbif.org/extension/gbif/1.0/description.xml).
+
+### taxonID
+
+```{r}
+description_ext %<>% mutate(taxonID = raw_taxonID)
+```
+
+### description
+
+```{r}
+description_ext %<>% mutate(description = description)
+```
+
+### type
+
+```{r}
+description_ext %<>% mutate(type = type)
+```
+
+### source
+
+Information about the source is provided in `raw_references`. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe `identifier_checklist` generated earlier.
+
+```{r}
+description_ext %<>% left_join(identifier_sequence, by = ("raw_references"))
+```
+
+Rename `id_sequence`:
+
+```{r}
+description_ext %<>%  rename("source" = "id_sequence")
+```
+
+### language
+
+```{r}
+description_ext %<>% mutate(language = "en")
+```
+
+## Post-processing
+
+Remove the original columns:
+
+```{r}
+description_ext %<>% select(-starts_with("raw_"))
+```
+
+Move `taxonID` to the first position:
+
+```{r}
+description_ext %<>% select(taxonID, everything())
+```
+
+Sort on `taxonID`:
+
+```{r}
+description_ext %<>% arrange(taxonID)
+```
+
+Preview data:
+
+```{r}
+description_ext %>% 
+  mutate(source = substr(source, 1, 20)) %>% # Shorten source to make it easier to display
+  head()
+```
+
+Save to CSV:
+
+```{r}
+write.csv(description_ext, file = dwc_description_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
+```
