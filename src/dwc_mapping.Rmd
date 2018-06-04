@@ -67,19 +67,20 @@ raw_data <- read_excel(path = raw_data_file)
 Clean the data somewhat: remove empty rows if present and clean names:
 
 ```{r}
-raw_data %<>% remove_empty_rows() %<>%     # Remove empty rows
+raw_data %<>% 
+  remove_empty_rows() %<>%
   clean_names()
 ```
 
 ## Clean scientific name
 
-Before we assign a taxonID to the scientific names (in `species`), we need to clean the information. We do this stepwise by using the `parsenames()` function provided by rgbif. 
+Before we assign a taxonID to the scientific names (in `species`), we need to clean the information first. We do this in a stepwise way by using the `parsenames()` function provided by rgbif. 
 
 ```{r}
 parsed_names <- parsenames(raw_data $ species)
 ```
 
-In this checklist, all specificEpithets should be populated. This is not always the case. Some cleaning was required:
+In this checklist, most taxa are species or infraspecies (only one genus present). This means that the field `specificepithet` should be fully populated (exept in the case of the one genus). Some cleaning was required:
 
 ```{r}
 raw_data %<>% mutate(species_clean = case_when(
@@ -170,7 +171,7 @@ Information for the higher classification is contained in `raw_higher_classifica
 taxon %>% distinct(raw_higher_classification)
 ```
 
-These map to different taxonomical levels (e.g. `Mammalia` = class while `Osteichthyes` = order). We interpret this information in the mapping of `kingdom`, `phylum`, `class` and `order`. However, not all classification information could be mapped to these Darwin Core terms, e.g. Angiosperms are currently considered to be unranked. For this group, we use the Darwin Core terms `higherClassification`.
+These map to different taxonomical levels (e.g. `Mammalia` = class while `Osteichthyes` = order). We interpret this information in the mapping of `kingdom`, `phylum`, `class` and `order`. However, not all information in `raw_higher_classification` could be mapped to these Darwin Core terms, e.g. Angiosperms are currently considered to be unranked. For this group, we use the Darwin Core terms `higherClassification`.
 
 ```{r}
 taxon %<>% mutate(kingdom = case_when(
@@ -221,25 +222,26 @@ taxon %<>% mutate(higherClassification = case_when(
 The information for `taxonRank` can be provided by the nameparser() function of rgbif. We generate it here and add the information to `taxon`:
 
 ```{r}
-taxonRank <- parsenames(taxon $ raw_species_clean)
+taxon_rank <- parsenames(taxon $ raw_species_clean)
 ```
 
 Select taxonRank information (in `rankmarker`). The field `notho` contains valuable information for the generic hybrids, so this column is selected as well. 
 
 ```{r}
-taxonRank %<>% select(scientificname, rankmarker, notho) 
+taxon_rank %<>% select(scientificname, rankmarker, notho) 
 ```
 
-Merge `taxonRank` with `taxon`:
+Merge `taxonRank` with `taxon` using scientific names:
 
 ```{r}
-taxon %<>% left_join(taxonRank, by = c("raw_species_clean" = "scientificname")) 
+taxon %<>% left_join(taxon_rank, by = c("raw_species_clean" = "scientificname")) 
 ```
 
-Show unique values for `rankmarker`:
+Show unique values for `rankmarker` and `notho`:
 
 ```{r}
-taxon %>% select(rankmarker, notho) %>% 
+taxon %>% 
+  select(rankmarker, notho) %>% 
   group_by_all() %>% 
   summarise(records = n())
 ```
@@ -247,11 +249,13 @@ taxon %>% select(rankmarker, notho) %>%
 Show scientificNames for which rankmarker = NA:
 
 ```{r}
-taxon %>% select(scientificName, rankmarker) %>% 
+taxon %>% 
+  select(scientificName, rankmarker) %>% 
   filter(is.na(rankmarker))
 ```
 
 `Maylandia M. K. Meyer & W. Förster, 1984` is a genus, the other two records are species.
+
 Map `taxonRank`:
 
 ```{r}
@@ -291,13 +295,15 @@ literature_references <- raw_data
 
 ## Pre-processing
 
-Information for the literature references is contained in `raw_references`, which are numbers. The link between these numbers and the full references is provided in the [Supplementary material file](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/10530_2016_1278_MOESM2_ESM.docx). We copy-pasted this information in a separated excel file (with some basic cleaning):
+Information for the literature references is contained in `raw_references`, which are (sequences of) numbers in this case. The link between these numbers and the full references is provided in the original [Supplementary material file](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/10530_2016_1278_MOESM2_ESM.docx)(page 28-30). We copy-pasted this information to a newly generated Excel file [references](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/references.xlsx), here saved as the dataframe `compiled_references`:
 
 ```{r}
 compiled_references <- read_excel(path = references, col_types = "text")
 ```
 
-To merge the full references in `compiled references` with the reference numbers provided in `raw_references` (using the field `identifier`), we need to clean and separate`raw_references` first. Concretely, we aim to provide **all** reference numbers in `raw_references`, instead of using the format containing `-` for a range of numbers between a delimited minimun and maximum (e.g. 3-7 is transformed to 3,4,5,6,7). To accomplish this, we first generate the function `colon_to_seq()`:
+The literature reference extension is a dataframe in which one row contains one single reference (a short identifier and the full reference) per taxon. We generate this file in several steps:
+
+1. Provide **all** reference numbers in `raw_references`, instead of using the format containing `-` for a range of numbers between a delimited minimun and maximum (e.g. 3-7 is transformed to 3,4,5,6,7). To accomplish this, we first generate the function `colon_to_seq()`:
 
 ```{r}
 colon_to_seq <- function(input){
@@ -322,7 +328,7 @@ literature_references %<>%
   mutate(raw_references_clean = colon_to_seq(raw_references)) 
 ```
 
-In a second step, we transform `literature_references` from a wide to a long dataset, with each row containing one reference number per taxon:
+2. Transform `literature_references` from a wide to a long dataset, with each row containing one reference number per taxon:
 
 ```{r}
 literature_references %<>%
@@ -331,7 +337,8 @@ literature_references %<>%
   separate_rows(references_sep, sep = ",")
 ```
 
-Merge `literature_references` with `compiled_references` to link the reference number with the full reference:
+
+3. Replace the reference numbers provided in `raw_references` with the full references provided in the dataframe `compiled_references` using the field `number` as a link. 
 
 ```{r}
 literature_references %<>% left_join(compiled_references, by = c("references_sep" = "number"))
@@ -339,7 +346,7 @@ literature_references %<>% left_join(compiled_references, by = c("references_sep
 
 This dataframe constitutes the basis for further mapping of the literature reference extension. 
 
-For the mapping of the other extensions, we need to translate the sequence of reference numbers given for each taxon in `raw_references` into a sequence of all identifiers corresponding to these specific numbers, separated by `|`. We generate this sequence here, link it with `raw_references` and save it as the dataframe `identifier_sequence`. 
+For the mapping of the field `source` in the other extensions, we need to translate the sequence of reference numbers given for each taxon in `raw_references` into a sequence of all corresponding identifiers separated by `|`. As we need to do this several times, we generate a new dataframe `identfier_sequence` here, linking the sequence of numbers in `raw_references` with the sequence of identifiers.
 
 Generate dataframe `identifier_sequence` with the required columns (add taxonID as this is necessary for implying the spread() function): 
 
@@ -347,7 +354,7 @@ Generate dataframe `identifier_sequence` with the required columns (add taxonID 
 identifier_sequence <- literature_references %>% select(raw_taxonID, raw_references, references_sep, identifier)
 ```
 
-To generate the required sequence of identifiers, we need to transform the dataset from one containing one identifier per taxon per row, to one containing a sequence of identifiers per taxon per row. We do this by using the `spread()`function first, generating 33 identifier columns, corresponding to the 33 identifiers: 
+To generate the required sequence of identifiers, we need to transform `identifier_sequence` from a dataframe containing one identifier per taxon per row, to one containing a sequence of identifiers per taxon per row. We do this by using the `spread()`function first, generating 33 identifier columns (corresponding to the 33 identifiers): 
 
 ```{r}
 identifier_sequence %<>% mutate(references_sep = as.numeric(references_sep)) %<>% 
@@ -364,7 +371,7 @@ new_names <- c("raw_taxonID", "raw_references", paste("ref", c(1:33), sep = ":")
 identifier_sequence %<>% rename_at(vars(old_names), ~ new_names) 
 ```
 
-Unite the 33 identifier columns into `id_sequence`:
+Generate `id_sequence`:
 
 ```{r}
 identifier_sequence %<>% unite("id_sequence", c(paste("ref", c(1:33), sep = ":")), sep = " | ")
@@ -382,7 +389,7 @@ Remove `raw_taxonID`:
 identifier_sequence %<>% select(-raw_taxonID) 
 ```
 
-Remove duplicate rows:
+Remove duplicate rows (some taxa have the same reference sequence):
 
 ```{r}
 identifier_sequence %<>% distinct(raw_references, .keep_all = TRUE)
@@ -393,6 +400,7 @@ We will use this dataframe to link the sequence of references numbers with the s
 ## Term mapping
 
 Map the data to [Literature References](http://rs.gbif.org/extension/gbif/1.0/references.xml).
+
 ### taxonID
 
 ```{r}
@@ -439,11 +447,15 @@ distribution <- raw_data
 
 ### pre-processing
 
-Information for the distributions and associated dates of first observation is contained in eight columns in total: 4 columns for the distribution information (Great Brittain, France, Belgium and the Netherlands in resp. `raw_established_gb`, `raw_established_france`, `raw_established_belgium` and `raw_established_netherlands`) and 4 columns for the first record of the taxon in these countries (resp. `raw_first_record_gb`, `raw_first_record_france`, `raw_first_record_belgium` and `raw_first_record_netherlands`). When a taxon is present in a country, this is indicated by a `Y` and a date of first record is provided. 
+Information for the distributions and associated dates of first observation is contained in eight columns in total: 
+- 4 columns for the distribution information (Great Brittain, France, Belgium and the Netherlands in resp. `raw_established_gb`, `raw_established_france`, `raw_established_belgium` and `raw_established_netherlands`) 
+- 4 columns for the first record of the taxon in these countries (resp. `raw_first_record_gb`, `raw_first_record_france`, `raw_first_record_belgium` and `raw_first_record_netherlands`). 
 
-We need to reduce the information to two columns: one with country presence information (`country column`, basis for mapping of `locality`, `locationID` and `countryCode`) and one with the date of first observance (`date` column, basis for mapping of `eventDate`). We do this in three steps:
+When a taxon is present in a country, this is indicated by a `Y` and a date of first record is provided. 
 
-1. Paste date and establishment information for each country into one column:
+We need to reduce the information for eight to two columns: one column containing country presence information (`country column`, basis for mapping of `locality`, `locationID` and `countryCode`) and column containing the date of first observance (`date` column, basis for mapping of `eventDate`). We do this in three steps:
+
+1. Paste date and establishment information for each country into one column (from 8 to 4 columns):
 
 ```{r}
 distribution %<>% mutate(record_gb = paste(raw_established_gb, raw_first_record_gb, sep = ","))  %<>% 
@@ -452,19 +464,19 @@ distribution %<>% mutate(record_gb = paste(raw_established_gb, raw_first_record_
   mutate(record_nl = paste(raw_established_netherlands, raw_first_record_netherlands, sep = ",")) 
 ```
 
-2. Generate `country` and `date` by gathering the new columns:
+2. Generate `country` and `date` by gathering the new columns (from 4 to 2 columns):
 
 ```{r}
 distribution %<>% gather("country", "date", record_gb, record_fr, record_be, record_nl) 
 ```
 
-3. Remove records with `NA,NA` (not present in the country and thus no date information) and the date information by removing `Y`:
+3. Clean `date`by removing records with `NA,NA` and removing `Y`:
 
 ```{r}
 distribution %<>% filter(date != "NA,NA") %<>% mutate(date = str_replace_all(date, "Y,", "")) 
 ```
 
-Rename records in `country`:
+4. Rename `country`:
 
 ```{r}
 distribution %<>% mutate(country = recode(country,
@@ -530,7 +542,7 @@ Inspect dates:
 distribution %>% distinct(date) %>% arrange(date)
 ```
 
-Check whether date information deviates from the required ISO 8601 format(here `YYYY`)
+Check which dates deviate from the required ISO 8601 format(here `YYYY`)
 
 ```{r}
 unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
@@ -540,11 +552,8 @@ We clean these dates:
 
 ```{r}
 distribution %<>% mutate(date = str_trim(date)) # remove whitespaces
-```
 
-
-```{r}
-distribution %<>% mutate(date = recode(date,
+distribution %<>% mutate(date = recode(date,    # recode deviating formats
    "n.d."  = "",
    "17634" = "1763",
    "2004," = "2004",
@@ -591,8 +600,6 @@ Remove the original columns:
 distribution %<>% select(-starts_with("raw_"), -country, -date)
 ```
 
-
-
 Preview data:
 
 ```{r}
@@ -625,7 +632,7 @@ species_profile %>%
 ```
 
 Two taxa have no information on the environment, i.e. `Salvelinus fontalis` and `Rattus norvegicus`. 
-`Salvelinus fontinalis` (brook trout) is fish found in both freshwater and marine habitats, while `Rattus norvegicus`(brown rat) is a terrestrial species. We add this information ourslves
+`Salvelinus fontinalis` (brook trout) is fish found in both freshwater and marine habitats, while `Rattus norvegicus`(brown rat) is a terrestrial species. We add this information to the checklist.
 
 We map this information respectively to `isFreshwater`, `isTerrestrial`, `isMarine` or a combination of these terms in the species profile extension.
 
@@ -710,7 +717,6 @@ Save to CSV:
 write.csv(species_profile, file = dwc_profile_file, na = "", row.names = FALSE, fileEncoding = "UTF-8")
 ```
 
-
 # Create description extension
 
 In the description extension we want to include several important characteristics (hereafter refered to as descriptors) about the species:
@@ -718,7 +724,7 @@ In the description extension we want to include several important characteristic
 - Native range
 - Pathway of introduction
 
-A single taxon can have multiple descriptions of the same type (e.g. multiple native ranges), expressed as multiple rows in the description extension.For each descriptor, we create a separate dataframe to process the specific information. We always specify _which descriptor_ we map (`type` column) and its _specific content_ (`description` column). After the mapping of these Darwin Core terms `type` and `value`, we merge the dataframes to generate one single description extension. We then continue the mapping process by adding the other Darwin Core terms (which content is independent of the type of descriptor, such as `language`).
+A single taxon can have multiple descriptions of the same type (e.g. multiple native ranges), expressed as multiple rows in the description extension. For each descriptor, we create a separate dataframe to process the specific information. We always specify _which descriptor_ we map (`type` column) and its _specific content_ (`description` column). After the mapping of these Darwin Core terms `type` and `value`, we merge the dataframes to generate one single description extension. We then continue the mapping process by adding the other Darwin Core terms (which content is independent of the type of descriptor, such as `language`).
 
 ## Native range
 
@@ -750,7 +756,7 @@ Gather in a `key` and `value` column:
 native_range %<>% gather("key", "value", paste("origin", c(1:4), sep = "_"), na.rm = TRUE) 
 ```
 
-inspect values:
+Inspect values:
 
 ```{r}
 native_range %>% 
@@ -878,7 +884,7 @@ pathway_desc %>%
   summarize(records = n())
 ```
 
-All available pathway information will be mapped to the six main categories of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). Vector information for which we have pathway information will be mapped to the subcategories of the CBD standard, but **only in certain cases**. For pathways `raw_pathway_disperal` and `raw_pathway_accidental`, we will **not** provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2016). For pathways `raw_pathway_import_escape` and `raw_pathway_import_release` , we will map vector information to the CBD standard **only** when they map unambigiously to one single CBD term (see also [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3). For vectors without pathway information (only for `ornamental` and `industry`), we can only map the information to CBD categories/subcategories when the link is straigtforward, which in this case, is not. In this case, we do not map these vectors to the CBD categories.
+All available pathway information will be mapped to the six main categories of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). Vector information for which we have pathway information will be mapped to the subcategories of the CBD standard, but **only in certain cases**. For pathways `raw_pathway_disperal` and `raw_pathway_accidental`, we will **not** provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2016). For pathways `raw_pathway_import_escape` and `raw_pathway_import_release`, we will map vector information to the CBD standard **only** when they map unambigiously to one single CBD term (see also [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3). For vectors without pathway information (only for `ornamental` and `industry`), we can only map the information to CBD categories/subcategories when the link is straigtforward, which in this case, is not. In this case, we do not map these vectors to the CBD categories.
 
 RINSE pathway | RINSE vector | CBD category | CBD subcategory
 --- | --- | --- | ---
