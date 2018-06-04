@@ -275,6 +275,12 @@ Remove the original columns:
 taxon %<>% select(-starts_with("raw_"), -rankmarker, - notho)
 ```
 
+Sort on `taxonID`:
+
+```{r}
+taxon %<>% arrange(taxonID)
+```
+
 Preview data:
 
 ```{r}
@@ -425,6 +431,12 @@ Remove the original columns:
 
 ```{r}
 literature_references %<>% select(-starts_with("raw_"), -references_sep, -full_reference)
+```
+
+Sort on `taxonID`:
+
+```{r}
+literature_references %<>% arrange(taxonID) 
 ```
 
 Preview data:
@@ -598,6 +610,12 @@ Remove the original columns:
 
 ```{r}
 distribution %<>% select(-starts_with("raw_"), -country, -date)
+```
+
+Sort on `taxonID`:
+
+```{r}
+distribution %<>% arrange(taxonID) 
 ```
 
 Preview data:
