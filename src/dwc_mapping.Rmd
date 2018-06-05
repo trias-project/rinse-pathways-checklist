@@ -911,37 +911,31 @@ accidental | industry | stowaway | NA
 accidental | leisure | stowaway | NA
 accidental | ornamental | stowaway | NA
 accidental | research | stowaway | NA
-
 accidental | biocontrol | contaminant | NA
 accidental | industry | contaminant | NA
 accidental | leisure | contaminant | NA
 accidental | ornamental | contaminant | NA
 accidental | research | contaminant | NA
-
 dispersal | biocontrol | corridor | NA
 dispersal | industry | corridor | NA
 dispersal | leisure | corridor | NA
 dispersal | ornamental | corridor | NA
 dispersal | research | corridor | NA
-
 dispersal | biocontrol | unaided | NA
 dispersal | industry | unaided| NA
 dispersal | leisure | unaided | NA
 dispersal | ornamental | unaided| NA
 dispersal | research | unaided | NA
-
 import_escape | biocontrol | escape | NA
 import_escape | industry | escape | NA
 import_escape | leisure | escape | live food and bait
 import_escape | ornamental | escape | NA 
 import_escape | research | escape | Research and ex-situ breeding (in facilities)
-
 import_release | biocontrol | release  | biological control
 import_release | industry | release | NA
 import_release | leisure | release | NA
 import_release | ornamental | release | NA
 import_release | research | release | NA
-
 
 We map this information in the new column `description`
 
