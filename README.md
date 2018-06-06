@@ -7,7 +7,7 @@ This repository contains the functionality to standardize the data of [Zieritz e
 
 ## Workflow
 
-[source data](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/copy_of_10530_2016_1278_MOESM2_ESM.xlsx) (transcribed from original) → Darwin Core [mapping script](http://trias-project.github.io/rinse-pathways-checklist/dwc_checklist.html) → generated [Darwin Core files](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/processed)
+[source data](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/copy_of_10530_2016_1278_MOESM2_ESM.xlsx) (transcribed from original) → Darwin Core [mapping script](http://trias-project.github.io/rinse-pathways-checklist/dwc_mapping.html) → generated [Darwin Core files](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/processed)
 
 ## Published datasets
 
@@ -32,7 +32,7 @@ The repository structure is based on [Cookiecutter Data Science](http://drivenda
 ├── specifications    : Data specifications for the Darwin Core files
 │
 └── src
-    ├── dwc_checklist.Rmd  : Darwin Core mapping script for checklist dataset
+    ├── dwc_mapping.Rmd  : Darwin Core mapping script for checklist dataset
     └── src.Rproj          : RStudio project file
 ```
 
@@ -40,7 +40,7 @@ The repository structure is based on [Cookiecutter Data Science](http://drivenda
 
 1. Clone this repository to your computer
 2. Open the RStudio project file
-3. Open the `dwc_checklist.Rmd` [R Markdown file](https://rmarkdown.rstudio.com/) in RStudio
+3. Open the `dwc_mapping.Rmd` [R Markdown file](https://rmarkdown.rstudio.com/) in RStudio
 4. Install any required packages
 5. Click `Run > Run All` to generate the processed data
 6. Alternatively, click `Build > Build website` to generate the processed data and build the website in `/docs`
