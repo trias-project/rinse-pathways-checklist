@@ -45,12 +45,12 @@ Set file paths (all paths should be relative to this script):
  
 ```{r}
 # Raw files:
-raw_data_file = "../data/raw/copy_of_10530_2016_1278_MOESM2_ESM.xlsx"
-references = "../data/raw/references.xlsx"
+raw_data_file = "../data/raw/transcribed_10530_2016_1278_MOESM2_ESM.xlsx"
+references = "../data/raw/transcribed_references.xlsx"
 
 # Processed files:
 dwc_taxon_file = "../data/processed/taxon.csv"
-dwc_literature_references_file = "../data/processed/literature_references.csv"
+dwc_literature_references_file = "../data/processed/references.csv"
 dwc_distribution_file = "../data/processed/distribution.csv"
 dwc_profile_file = "../data/processed/speciesprofile.csv"
 dwc_description_file = "../data/processed/description.csv"
@@ -301,10 +301,10 @@ literature_references <- raw_data
 
 ## Pre-processing
 
-Information for the literature references is contained in `raw_references`, which are (sequences of) numbers in this case. The link between these numbers and the full references is provided in the original [Supplementary material file](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/10530_2016_1278_MOESM2_ESM.docx)(page 28-30). We copy-pasted this information to a newly generated Excel file [references](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/references.xlsx), here saved as the dataframe `compiled_references`:
+Information for the literature references is contained in `raw_references`, which are (sequences of) numbers in this case. The link between these numbers and the full references is provided in the original [Supplementary material file](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/10530_2016_1278_MOESM2_ESM.docx) (page 28-30). We copy-pasted this information to a newly generated Excel file [references](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/transcribed_references.xlsx), here saved as the dataframe `transcribed_references`:
 
 ```{r}
-compiled_references <- read_excel(path = references, col_types = "text")
+transcribed_references <- read_excel(path = references, col_types = "text")
 ```
 
 The literature reference extension is a dataframe in which one row contains one single reference (a short identifier and the full reference) per taxon. We generate this file in several steps:
@@ -343,14 +343,20 @@ literature_references %<>%
   separate_rows(references_sep, sep = ",")
 ```
 
-
-3. Replace the reference numbers provided in `raw_references` with the full references provided in the dataframe `compiled_references` using the field `number` as a link. 
+3. Replace the reference numbers provided in `raw_references` with the full references provided in the dataframe `transcribed_references` using the field `number` as a link. 
 
 ```{r}
-literature_references %<>% left_join(compiled_references, by = c("references_sep" = "number"))
+literature_references %<>% left_join(transcribed_references, by = c("references_sep" = "number"))
 ```
 
-This dataframe constitutes the basis for further mapping of the literature reference extension. 
+This dataframe constitutes the basis for further mapping of the literature reference extension:
+
+```{r}
+literature_references %>%
+  select(raw_species, identifier, full_reference) %>%
+  head()
+```
+
 
 For the mapping of the field `source` in the other extensions, we need to translate the sequence of reference numbers given for each taxon in `raw_references` into a sequence of all corresponding identifiers separated by `|`. As we need to do this several times, we generate a new dataframe `identfier_sequence` here, linking the sequence of numbers in `raw_references` with the sequence of identifiers.
 
