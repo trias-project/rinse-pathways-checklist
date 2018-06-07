@@ -13,7 +13,7 @@ output:
     number_sections: true
 ---
 
-This document describes how we map the checklist data to Darwin Core. The source file for this document can be found [here](https://github.com/trias-project/rinse-pathways-checklist/tree/master/data/raw).
+This document describes how we map the checklist data to Darwin Core. The source file for this document can be found [here](https://github.com/trias-project/rinse-pathways-checklist/blob/master/src/dwc_mapping.Rmd).
 
 # Setup
 
@@ -68,7 +68,7 @@ Clean the data somewhat: remove empty rows if present and clean names:
 
 ```{r}
 raw_data %<>% 
-  remove_empty_rows() %<>%
+  remove_empty("rows") %<>%
   clean_names()
 ```
 
@@ -276,7 +276,7 @@ taxon %<>% arrange(taxonID)
 Preview data:
 
 ```{r}
-head(taxon)
+taxon %>% head()
 ```
 
 Save to CSV:
@@ -463,15 +463,16 @@ write.csv(literature_references, file = dwc_literature_references_file, na = "",
 distribution <- raw_data
 ```
 
-### pre-processing
+## Pre-processing
 
-Information for the distributions and associated dates of first observation is contained in eight columns in total: 
-- 4 columns for the distribution information (Great Brittain, France, Belgium and the Netherlands in resp. `raw_established_gb`, `raw_established_france`, `raw_established_belgium` and `raw_established_netherlands`) 
+Information for the distributions and associated dates of first observation is contained in eight columns in total:
+
+- 4 columns for the distribution information (Great Britain, France, Belgium and the Netherlands in resp. `raw_established_gb`, `raw_established_france`, `raw_established_belgium` and `raw_established_netherlands`)
 - 4 columns for the first record of the taxon in these countries (resp. `raw_first_record_gb`, `raw_first_record_france`, `raw_first_record_belgium` and `raw_first_record_netherlands`). 
 
-When a taxon is present in a country, this is indicated by a `Y` and a date of first record is provided. 
+When a taxon is present in a country, this is indicated by a `Y` and a date of first record is provided.
 
-We need to reduce the information for eight to two columns: one column containing country presence information (`country column`, basis for mapping of `locality`, `locationID` and `countryCode`) and column containing the date of first observance (`date` column, basis for mapping of `eventDate`). We do this in three steps:
+We need to reduce the information for eight to two columns: one column containing country presence information (`country column`, which is the basis for `locality`, `locationID` and `countryCode`) and column containing the date of first observance (`date` column, which is the basis for `eventDate`). We do this in three steps:
 
 1. Paste date and establishment information for each country into one column (from 8 to 4 columns):
 
@@ -488,7 +489,7 @@ distribution %<>% mutate(record_gb = paste(raw_established_gb, raw_first_record_
 distribution %<>% gather("country", "date", record_gb, record_fr, record_be, record_nl) 
 ```
 
-3. Clean `date`by removing records with `NA,NA` and removing `Y`:
+3. Clean `date` by removing records with `NA,NA` and removing `Y`:
 
 ```{r}
 distribution %<>% filter(date != "NA,NA") %<>% mutate(date = str_replace_all(date, "Y,", "")) 
@@ -501,7 +502,9 @@ distribution %<>% mutate(country = recode(country,
   "record_gb" = "Great Britain",
   "record_fr" = "France",
   "record_be" = "Belgium",
-  "record_nl" = "The Netherlands"))
+  "record_nl" = "The Netherlands")
+)
+```
 ```
 
 ## Term mapping
@@ -560,13 +563,13 @@ Inspect dates:
 distribution %>% distinct(date) %>% arrange(date)
 ```
 
-Check which dates deviate from the required ISO 8601 format(here `YYYY`)
+Check which dates deviate from the required ISO 8601 format (here `YYYY`)
 
 ```{r}
 unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
 ```
 
-We clean these dates:
+Clean those dates:
 
 ```{r}
 distribution %<>% mutate(date = str_trim(date)) # remove whitespaces
@@ -588,7 +591,7 @@ After this cleaning step, there should be no deviations from the ISO 8601 format
 unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
 ```
 
-We want to express `eventDate` as the range between the date of first and last record. In this case, we don't have information about the last record. We'll consider the publication year of Zieritz et al. (2016) as the date when the presence of the species was last verified:
+We want to express `eventDate` as the range between the date of first and last record. In this case, we do not have information about the last record. We will consider the publication year of Zieritz et al. (2016) as the date when the presence of the species was last verified:
 
 ```{r}
 distribution %<>% mutate(eventDate = case_when(
@@ -627,7 +630,7 @@ distribution %<>% arrange(taxonID)
 Preview data:
 
 ```{r}
-head(distribution)
+distribution %>% head()
 ```
 
 Save to CSV:
@@ -638,7 +641,7 @@ write.csv(distribution, file = dwc_distribution_file, na = "", row.names = FALSE
 
 # Create species profile extension
 
-In this extension will express broad habitat characteristics (e.g. `isTerrestrial`) of the species.
+In this extension we express broad habitat characteristics (e.g. `isTerrestrial`) of the species.
 
 ```{r start_species_profile}
 species_profile <- raw_data
@@ -655,10 +658,12 @@ species_profile %>%
   summarize(records = n())
 ```
 
-Two taxa have no information on the environment, i.e. `Salvelinus fontalis` and `Rattus norvegicus`. 
-`Salvelinus fontinalis` (brook trout) is fish found in both freshwater and marine habitats, while `Rattus norvegicus`(brown rat) is a terrestrial species. We add this information to the checklist.
+Only two taxa have no information on the environment:
 
-We map this information respectively to `isFreshwater`, `isTerrestrial`, `isMarine` or a combination of these terms in the species profile extension.
+- `Salvelinus fontinalis` (brook trout): a fish found in both freshwater and marine habitats
+- `Rattus norvegicus`(brown rat): a terrestrial mammal
+
+We will add this information in the mapping. Environment information is mapped to `isFreshwater`, `isTerrestrial`, `isMarine` or a combination of these terms in the species profile extension.
 
 ## Term mapping
 
@@ -878,7 +883,8 @@ pathway_desc %<>% mutate(vector_provided = case_when(
 )) 
 ```
 
-We combine this information in two new columns:
+We gather this information in two new columns:
+
 - `pathway`: containing the information in `raw_pathway_accidental`, `raw_pathway_disperal`, `raw_pathway_import_escape` and `raw_pathway_import_release`)
 - `vector`: containing the information in `raw_vector_biocontrol`, `raw_vector_leisure`, `raw_vector_industry`, `raw_vector_ornamental`and `raw_vector_research`
 
@@ -889,14 +895,17 @@ pathway_desc %<>%
 ```
 
 We need to filter out the following combinations:
-- Rows for which `pathway_value` = NA and `vector_value` = NA,
-- Rows for which `pathway_value` = "Y", `vector_value` = NA BUT vector_provided` = YES,
-- Rows for which `pathway_value` = NA, `vector_value` = "Y" BUT vector_provided` = YES,
+
+- Rows for which `pathway_value` = `NA` and `vector_value` = `NA`,
+- Rows for which `pathway_value` = `Y`, `vector_value` = `NA` BUT `vector_provided` = `YES`,
+- Rows for which `pathway_value` = `NA`, `vector_value` = `Y` BUT `vector_provided` = `YES`,
 
 ```{r}
-pathway_desc %<>% filter(!(is.na(pathway_value) & is.na(vector_value)) &
-                          !(pathway_value == "Y" & is.na(vector_value) & vector_provided == "YES") & 
-                          !(is.na(pathway_value) & vector_value == "Y" & pathway_provided == "YES")) 
+pathway_desc %<>% filter(
+  !(is.na(pathway_value) & is.na(vector_value)) &
+  !(pathway_value == "Y" & is.na(vector_value) & vector_provided == "YES") & 
+  !(is.na(pathway_value) & vector_value == "Y" & pathway_provided == "YES")
+) 
 ```
 
 Overview of all possible combinations for pathway and vector:
@@ -908,7 +917,11 @@ pathway_desc %>%
   summarize(records = n())
 ```
 
-All available pathway information will be mapped to the six main categories of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). Vector information for which we have pathway information will be mapped to the subcategories of the CBD standard, but **only in certain cases**. For pathways `raw_pathway_disperal` and `raw_pathway_accidental`, we will **not** provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2016). For pathways `raw_pathway_import_escape` and `raw_pathway_import_release`, we will map vector information to the CBD standard **only** when they map unambigiously to one single CBD term (see also [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3). For vectors without pathway information (only for `ornamental` and `industry`), we can only map the information to CBD categories/subcategories when the link is straigtforward, which in this case, is not. In this case, we do not map these vectors to the CBD categories.
+All available pathway information will be mapped to the six main categories of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). Vector information for which we have pathway information will be mapped to the subcategories of the CBD standard, but **only in certain cases**.
+
+- For pathways `raw_pathway_accidental` and `raw_pathway_disperal`, we will **not** provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2016).
+- For pathways `raw_pathway_import_escape` and `raw_pathway_import_release`, we will map vector information to the CBD standard **only** when they map unambigiously to one single CBD term (see also [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3)).
+- For vectors without pathway information (only for `ornamental` and `industry`), we can only map the information to CBD categories/subcategories when the link is straigtforward, which in this case, is not. In this case, we do not map these vectors to the CBD categories.
 
 RINSE pathway | RINSE vector | CBD category | CBD subcategory
 --- | --- | --- | ---
@@ -943,7 +956,7 @@ import_release | leisure | release | NA
 import_release | ornamental | release | NA
 import_release | research | release | NA
 
-We map this information in the new column `description`
+We map this information in the new column `description`:
 
 ```{r}
 pathway_desc %<>% mutate(description = case_when(
