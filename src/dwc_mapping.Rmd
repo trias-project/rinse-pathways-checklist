@@ -505,6 +505,13 @@ distribution %<>% mutate(country = recode(country,
   "record_nl" = "The Netherlands")
 )
 ```
+
+Preview:
+
+```{r}
+distribution %>%
+  select(raw_species, country, date) %>%
+  head()
 ```
 
 ## Term mapping
@@ -892,6 +899,14 @@ We gather this information in two new columns:
 pathway_desc %<>% 
   gather("pathway", "pathway_value", starts_with("raw_pathway")) %<>% 
   gather("vector", "vector_value", starts_with("raw_vector"))
+```
+
+Preview:
+
+```{r}
+pathway_desc %>%
+  select(pathway, pathway_value, pathway_provided, vector, vector_value, vector_provided) %>%
+  head()
 ```
 
 We need to filter out the following combinations:
