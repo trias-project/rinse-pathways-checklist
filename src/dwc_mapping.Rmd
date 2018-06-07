@@ -940,31 +940,21 @@ All available pathway information will be mapped to the six main categories of t
 
 RINSE pathway | RINSE vector | CBD category | CBD subcategory
 --- | --- | --- | ---
-accidental | biocontrol | stowaway | NA
-accidental | industry | stowaway | NA
-accidental | leisure | stowaway | NA
-accidental | ornamental | stowaway | NA
-accidental | research | stowaway | NA
-accidental | biocontrol | contaminant | NA
-accidental | industry | contaminant | NA
-accidental | leisure | contaminant | NA
-accidental | ornamental | contaminant | NA
-accidental | research | contaminant | NA
-dispersal | biocontrol | corridor | NA
-dispersal | industry | corridor | NA
-dispersal | leisure | corridor | NA
-dispersal | ornamental | corridor | NA
-dispersal | research | corridor | NA
-dispersal | biocontrol | unaided | NA
-dispersal | industry | unaided| NA
-dispersal | leisure | unaided | NA
-dispersal | ornamental | unaided| NA
-dispersal | research | unaided | NA
+accidental | biocontrol | stowaway, contaminant | NA
+accidental | industry | stowaway, contaminant | NA
+accidental | leisure | stowaway, contaminant | NA
+accidental | ornamental | stowaway, contaminant | NA
+accidental | research | stowaway, contaminant | NA
+dispersal | biocontrol | natural_dispersal, unaided | NA
+dispersal | industry | natural_dispersal, unaided | NA
+dispersal | leisure | natural_dispersal, unaided | NA
+dispersal | ornamental | natural_dispersal, unaided | NA
+dispersal | research | natural_dispersal, unaided | NA
 import_escape | biocontrol | escape | NA
 import_escape | industry | escape | NA
 import_escape | leisure | escape | live food and bait
 import_escape | ornamental | escape | NA 
-import_escape | research | escape | Research and ex-situ breeding (in facilities)
+import_escape | research | escape | research and ex-situ breeding (in facilities)
 import_release | biocontrol | release  | biological control
 import_release | industry | release | NA
 import_release | leisure | release | NA
@@ -976,7 +966,7 @@ We map this information in the new column `description`:
 ```{r}
 pathway_desc %<>% mutate(description = case_when(
   pathway == "raw_pathway_accidental" & !is.na(pathway_value) ~ "stowaway,contaminant",
-  pathway == "raw_pathway_dispersal" & !is.na(pathway_value) ~ "dispersal,unaided",
+  pathway == "raw_pathway_dispersal" & !is.na(pathway_value) ~ "natural_dispersal,unaided",
   pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & vector_value == "Y" ~ "escape_food_bait",
   pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & is.na(vector_value) ~ "escape",
   pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector != "raw_vector_leisure"  ~ "escape",
@@ -989,7 +979,7 @@ pathway_desc %<>% mutate(description = case_when(
   is.na(pathway_value)  ~ ""))
 ```
 
-Separate `description` when more than two values are provided, i.e. in case of `pathway = accidental` or `pathway = dispersal`:
+Separate `description` when more than two values are provided, i.e. in case of `pathway = accidental` or `pathway = natural_dispersal`:
 
 ```{r}
 pathway_desc %<>% separate_rows(description, sep = ",")
