@@ -559,7 +559,7 @@ distribution %<>% mutate(occurrenceStatus = "present")
 ### establishmentMeans
 
 ```{r}
-distribution %<>% mutate(establishmentMeans = "established") 
+distribution %<>% mutate(establishmentMeans = "introduced") 
 ```
 
 ### eventDate
