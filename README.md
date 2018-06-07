@@ -1,5 +1,4 @@
-# RINSE - registry of pathways and vectors of biological invasions in Northwest Europe
-
+# RINSE - Pathways and vectors of biological invasions in Northwest Europe
 
 ## Rationale
 
