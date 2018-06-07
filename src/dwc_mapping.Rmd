@@ -1,6 +1,6 @@
 ---
 title: "Darwin Core mapping"
-subtitle: "For: RINSE - pathways and vectors of biological invasions in Northwest Europe"
+subtitle: "For: RINSE - Pathways and vectors of biological invasions in Northwest Europe"
 author:
 - Lien Reyserhove
 - Peter Desmet
@@ -148,7 +148,7 @@ taxon %<>% mutate(datasetID = "")
 ### datasetName
 
 ```{r}
-taxon %<>% mutate(datasetName = "RINSE - pathways and vectors of biological invasions in Northwest Europe")
+taxon %<>% mutate(datasetName = "RINSE - Pathways and vectors of biological invasions in Northwest Europe")
 ```
 
 ### taxonID
