@@ -37,7 +37,7 @@ library(janitor)   # To clean input data
 library(readxl)    # To read Excel files
 library(stringr)   # To perform string operations
 library(digest)    # To generate hashes
-library(rgbif)     # Interface to the GBIF API
+library(rgbif)     # To parse names
 library(purrr)     # To clean references
 ```
 
@@ -72,15 +72,9 @@ raw_data %<>%
   clean_names()
 ```
 
-## Clean scientific name
+## Generate taxonID
 
-Before we assign a taxonID to the scientific names (in `species`), we need to clean the information first. We do this in a stepwise way by using the `parsenames()` function provided by rgbif. 
-
-```{r}
-parsed_names <- parsenames(raw_data $ species)
-```
-
-In this checklist, most taxa are species or infraspecies (only one genus present). This means that the field `specificepithet` should be fully populated (exept in the case of the one genus). Some cleaning was required:
+To uniquely identify a taxon in the taxon core and reference taxa in the extensions, we need a `taxonID`. Since we need it in all generated files, we generate it here in the raw data frame. It is a combination of `dataset-shortname:taxon:` and a hash based on the scientific name. As long as the scientific name doesn't change, the ID will be stable. Some of the names require some minor cleaning first though:
 
 ```{r}
 raw_data %<>% mutate(species_clean = case_when(
@@ -91,19 +85,17 @@ raw_data %<>% mutate(species_clean = case_when(
   TRUE ~ species)) 
 ```
 
-## Generate taxonID
-
-To uniquely identify a taxon in the taxon core and reference taxa in the extensions, we need a `taxonID`. Since we need it in all generated files, we generate it here in the raw data frame. It is a combination of `dataset-shortname:taxon:` and a hash based on the scientific name. As long as the scientific name doesn't change, the ID will be stable:
+Generate `taxonID`:
 
 ```{r}
-# Vectorize the digest function (The digest() function isn't vectorized. So if you pass in a vector, you get one value for the whole vector rather than a digest for each element of the vector):
+# Vectorize the digest function (the digest() function isn't vectorized. So if you pass in a vector, you get one value for the whole vector rather than a digest for each element of the vector):
 vdigest <- Vectorize(digest)
 
 # Generate taxonID:
-raw_data %<>% mutate(taxonID = paste("rinse-pathways-checklist", "taxon", vdigest (species_clean, algo="md5"), sep=":"))
+raw_data %<>% mutate(taxonID = paste("rinse-pathways-checklist", "taxon", vdigest (species_clean, algo = "md5"), sep = ":"))
 ```
 
-## Further pre-processing:
+## Further pre-processing
 
 Add prefix `raw_` to all column names to avoid name clashes with Darwin Core terms:
 
@@ -219,22 +211,22 @@ taxon %<>% mutate(higherClassification = case_when(
 
 ### taxonRank
 
-The information for `taxonRank` can be provided by the nameparser() function of rgbif. We generate it here and add the information to `taxon`:
+The taxon rank can be provided by the `nameparser()` function of rgbif. First we create a data frame with the parsed names:
 
-```{r}
-taxon_rank <- parsenames(taxon $ raw_species_clean)
+```{r gbif_parse_names}
+taxon_ranks <- parsenames(taxon$raw_species_clean)
 ```
 
-Select taxonRank information (in `rankmarker`). The field `notho` contains valuable information for the generic hybrids, so this column is selected as well. 
+And then select rank information from `rankmarker`. The field `notho` contains valuable information for the generic hybrids, so this column is selected as well. 
 
 ```{r}
-taxon_rank %<>% select(scientificname, rankmarker, notho) 
+taxon_ranks %<>% select(scientificname, rankmarker, notho) 
 ```
 
-Merge `taxonRank` with `taxon` using scientific names:
+Merge `taxon_ranks` with `taxon` using scientific names:
 
 ```{r}
-taxon %<>% left_join(taxon_rank, by = c("raw_species_clean" = "scientificname")) 
+taxon %<>% left_join(taxon_ranks, by = c("raw_species_clean" = "scientificname")) 
 ```
 
 Show unique values for `rankmarker` and `notho`:
@@ -246,7 +238,7 @@ taxon %>%
   summarise(records = n())
 ```
 
-Show scientificNames for which rankmarker = NA:
+Show `scientificName`s for which `rankmarker` = `NA`:
 
 ```{r}
 taxon %>% 
