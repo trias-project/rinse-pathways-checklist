@@ -2,16 +2,16 @@
 
 ## Rationale
 
-This repository contains the functionality to standardize the data of [Zieritz et al. (2017)](https://doi.org/10.1007/s10530-016-1278-z) (Supplementary Table 2) to a [Darwin Core checklist](https://www.gbif.org/dataset-classes) that can be harvested by [GBIF](http://www.gbif.org). It was developed for the [TrIAS project](http://trias-project.be).
+This repository contains the functionality to standardize the data of [Zieritz et al. (2017)](https://doi.org/10.1007/s10530-016-1278-z) to a [Darwin Core checklist](https://www.gbif.org/dataset-classes) that can be harvested by [GBIF](http://www.gbif.org). It was developed for the [TrIAS project](http://trias-project.be).
 
 ## Workflow
 
-[source data](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/copy_of_10530_2016_1278_MOESM2_ESM.xlsx) (transcribed from original) → Darwin Core [mapping script](http://trias-project.github.io/rinse-pathways-checklist/dwc_mapping.html) → generated [Darwin Core files](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/processed)
+[source data](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/copy_of_10530_2016_1278_MOESM2_ESM.xlsx) (transcribed from the original [Supplementary Table 2](https://static-content.springer.com/esm/art%3A10.1007%2Fs10530-016-1278-z/MediaObjects/10530_2016_1278_MOESM2_ESM.docx) `.doc` file) → Darwin Core [mapping script](http://trias-project.github.io/rinse-pathways-checklist/dwc_mapping.html) → generated [Darwin Core files](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/processed)
 
 ## Published datasets
 
-* Checklist dataset on the IPT
-* Checklist dataset on GBIF
+* Dataset on the IPT
+* Dataset on GBIF
 
 ## Repo structure
 
@@ -28,11 +28,9 @@ The repository structure is based on [Cookiecutter Data Science](http://drivenda
 │
 ├── docs              : Repository website GENERATED
 │
-├── specifications    : Data specifications for the Darwin Core files
-│
 └── src
-    ├── dwc_mapping.Rmd  : Darwin Core mapping script for checklist dataset
-    └── src.Rproj          : RStudio project file
+    ├── dwc_mapping.Rmd  : Darwin Core mapping script, core functionality of this repository
+    └── src.Rproj        : RStudio project file
 ```
 
 ## Installation
