@@ -2,7 +2,7 @@
 
 ## Rationale
 
-This repository contains the functionality to standardize the data of [Zieritz et al. (2017)](https://link.springer.com/article/10.1007/s10530-016-1278-z) (Supplementary Table 2) to a [Darwin Core checklist](https://www.gbif.org/dataset-classes) that can be harvested by [GBIF](http://www.gbif.org). The repository also contains the code for a [website](http://trias-project.github.io/rinse-pathways-checklist/map.html) to explore the checklist data. It was developed for the [TrIAS project](http://trias-project.be).
+This repository contains the functionality to standardize the data of [Zieritz et al. (2017)](https://doi.org/10.1007/s10530-016-1278-z) (Supplementary Table 2) to a [Darwin Core checklist](https://www.gbif.org/dataset-classes) that can be harvested by [GBIF](http://www.gbif.org). It was developed for the [TrIAS project](http://trias-project.be).
 
 ## Workflow
 
