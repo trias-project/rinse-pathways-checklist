@@ -299,12 +299,14 @@ Information for the literature references is contained in `raw_references`, whic
 transcribed_references <- read_excel(path = references, col_types = "text")
 ```
 
+### Full references (on per row)
+
 The literature reference extension is a dataframe in which one row contains one single reference (a short identifier and the full reference) per taxon. We generate this file in several steps:
 
-1. Provide **all** reference numbers in `raw_references`, instead of using the format containing `-` for a range of numbers between a delimited minimun and maximum (e.g. 3-7 is transformed to 3,4,5,6,7). To accomplish this, we first generate the function `colon_to_seq()`:
+1. Provide **all** reference numbers in `raw_references`, instead of using the format containing `-` for a range of numbers between a delimited minimun and maximum (e.g. `3-7` is transformed to `3,4,5,6,7`). To accomplish this, we first create the function `hyphen_to_sequence()`:
 
 ```{r}
-colon_to_seq <- function(input){
+hyphen_to_sequence <- function(input){
   seq_locs <- gregexpr("\\d+-\\d+", input)
   matched <- regmatches(input, seq_locs)[[1]]
   
@@ -318,12 +320,12 @@ colon_to_seq <- function(input){
 }
 ```
 
-Apply cleaning functions:
+Apply function:
 
 ```{r}
 literature_references %<>% 
   rowwise() %<>%
-  mutate(raw_references_clean = colon_to_seq(raw_references)) 
+  mutate(raw_references_clean = hyphen_to_sequence(raw_references)) 
 ```
 
 2. Transform `literature_references` from a wide to a long dataset, with each row containing one reference number per taxon:
@@ -349,16 +351,17 @@ literature_references %>%
   head()
 ```
 
+### Source references (sequence of identifiers)
 
-For the mapping of the field `source` in the other extensions, we need to translate the sequence of reference numbers given for each taxon in `raw_references` into a sequence of all corresponding identifiers separated by `|`. As we need to do this several times, we generate a new dataframe `identfier_sequence` here, linking the sequence of numbers in `raw_references` with the sequence of identifiers.
+For the mapping of the field `source` in the other extensions, we need to translate the sequence of reference numbers given for each taxon in `raw_references` into a sequence of all corresponding identifiers separated by ` | `. As we need to do this several times, we generate a new dataframe `identifier_sequence` here, linking the sequence of numbers in `raw_references` with the sequence of identifiers.
 
-Generate dataframe `identifier_sequence` with the required columns (add taxonID as this is necessary for implying the spread() function): 
+Generate dataframe `identifier_sequence` with the required columns (add taxonID as this is necessary for spreading in the next step): 
 
 ```{r}
 identifier_sequence <- literature_references %>% select(raw_taxonID, raw_references, references_sep, identifier)
 ```
 
-To generate the required sequence of identifiers, we need to transform `identifier_sequence` from a dataframe containing one identifier per taxon per row, to one containing a sequence of identifiers per taxon per row. We do this by using the `spread()`function first, generating 33 identifier columns (corresponding to the 33 identifiers): 
+To generate the required sequence of identifiers, we need to transform `identifier_sequence` from a dataframe containing one identifier per taxon per row, to one containing a sequence of identifiers per taxon per row. We do this by using the `spread()` function first, generating 33 identifier columns (corresponding to the 33 identifiers):
 
 ```{r}
 identifier_sequence %<>% mutate(references_sep = as.numeric(references_sep)) %<>% 
@@ -366,19 +369,24 @@ identifier_sequence %<>% mutate(references_sep = as.numeric(references_sep)) %<>
   select(-`<NA>`)
 ```
 
-In the following step, we unite these 33 columns into one field `id_sequence`, using `|` as a separator.
-To efficiently unite the identifier columns (`1-33`), we need to rename the column names by adding the prefix `ref`:
+In the following step, we unite these 33 columns into one field `id_sequence`, using ` | ` as a separator. To unite the identifier columns (`1-33`) in a single step, we first rename the column names by adding the prefix `ref_`:
 
 ```{r}
 old_names <- c("raw_taxonID", "raw_references", c(1:33))
-new_names <- c("raw_taxonID", "raw_references", paste("ref", c(1:33), sep = ":"))
-identifier_sequence %<>% rename_at(vars(old_names), ~ new_names) 
+new_names <- c("raw_taxonID", "raw_references", paste0("ref_", c(1:33)))
+identifier_sequence %<>% rename_at(vars(old_names), ~ new_names)
 ```
 
 Generate `id_sequence`:
 
 ```{r}
-identifier_sequence %<>% unite("id_sequence", c(paste("ref", c(1:33), sep = ":")), sep = " | ")
+identifier_sequence %<>% unite("id_sequence", c(paste0("ref_", c(1:33))), sep = " | ")
+```
+
+Preview:
+
+```{r}
+identifier_sequence %>% head()
 ```
 
 Remove `NA`'s from the generated sequences:
@@ -399,7 +407,7 @@ Remove duplicate rows (some taxa have the same reference sequence):
 identifier_sequence %<>% distinct(raw_references, .keep_all = TRUE)
 ```
 
-We will use this dataframe to link the sequence of references numbers with the sequence of identifiers in the mapping of the following extensions.
+We will use this dataframe to link the sequence of references numbers (`raw_references`) with the sequence of identifiers (`id_sequence`) in the mapping of the following extensions.
 
 ## Term mapping
 
@@ -440,7 +448,7 @@ literature_references %<>% arrange(taxonID)
 Preview data:
 
 ```{r}
-head(literature_references)
+literature_references %>% head()
 ```
 
 Save to CSV:
@@ -590,7 +598,7 @@ distribution %<>% mutate(eventDate = case_when(
 
 ### source
 
-Information about the source is provided in `raw_references`. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe `identifier_checklist` generated earlier.
+Information about the source is provided in `raw_references`. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe `identifier_sequence` generated earlier.
 
 ```{r}
 distribution %<>% left_join(identifier_sequence, by = ("raw_references"))
@@ -1021,7 +1029,7 @@ description_ext %<>% mutate(type = type)
 
 ### source
 
-Information about the source is provided in `raw_references`. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe `identifier_checklist` generated earlier.
+Information about the source is provided in `raw_references`. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe `identifier_sequence` generated earlier.
 
 ```{r}
 description_ext %<>% left_join(identifier_sequence, by = ("raw_references"))
