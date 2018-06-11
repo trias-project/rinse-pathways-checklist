@@ -589,12 +589,12 @@ After this cleaning step, there should be no deviations from the ISO 8601 format
 unique(distribution[which(str_detect(distribution $ date,"^[0-9]{4}$") == FALSE), "date"])
 ```
 
-We want to express `eventDate` as the range between the date of first and last record. In this case, we do not have information about the last record. We will consider the publication year of Zieritz et al. (2016) as the date when the presence of the species was last verified:
+We want to express `eventDate` as the range between the date of first and last record. In this case, we do not have information about the last record. We will consider the publication year of Zieritz et al. (2017) as the date when the presence of the species was last verified:
 
 ```{r}
 distribution %<>% mutate(eventDate = case_when(
   date == "" ~ "",
-  date != "" ~ paste(date, "2016", sep = "/"))) 
+  date != "" ~ paste(date, "2017", sep = "/"))) 
 ```
 
 ### source
