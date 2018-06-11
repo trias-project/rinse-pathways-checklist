@@ -163,7 +163,7 @@ Information for the higher classification is contained in `raw_higher_classifica
 taxon %>% distinct(raw_higher_classification)
 ```
 
-These map to different taxonomical levels (e.g. `Mammalia` = class while `Osteichthyes` = order). We interpret this information in the mapping of `kingdom`, `phylum`, `class` and `order`. However, not all information in `raw_higher_classification` could be mapped to these Darwin Core terms, e.g. Angiosperms are currently considered to be unranked. For this group, we use the Darwin Core terms `higherClassification`.
+These map to different taxonomical levels (e.g. `Mammalia` = class while `Osteichthyes` = order). We interpret this information in the mapping of `kingdom`, `phylum`, `class` and `order`. 
 
 ```{r}
 taxon %<>% mutate(kingdom = case_when(
@@ -175,18 +175,20 @@ taxon %<>% mutate(kingdom = case_when(
 
 ```{r}
 taxon %<>% mutate(phylum = case_when(
-  raw_higher_classification == "Angiospermae" ~ "" ,
+  raw_higher_classification == "Angiospermae" ~ "Magnoliophyta" ,
   raw_higher_classification == "Mollusca" ~ "Mollusca",
   TRUE ~ "Chordata")) 
 ```
 
 ### class
 
+Osteichthyes, which is a superclass, includes Actinopterygii and Sarcopterygii (https://en.wikipedia.org/wiki/Osteichthyes). All the taxa in this list are Actinopterygii which is a class.
+
 ```{r}
 taxon %<>% mutate(class = case_when(
   raw_higher_classification == "Anseriformes" ~ "Aves",
   raw_higher_classification == "Mammalia" ~ "Mammalia",
-  raw_higher_classification == "Osteichthyes" ~ "Actinopterygii",  # Osteichthyes is an unaccepted synonym
+  raw_higher_classification == "Osteichthyes" ~ "Actinopterygii", 
   TRUE ~ "")) 
 ```
 
@@ -196,17 +198,6 @@ taxon %<>% mutate(class = case_when(
 taxon %<>% mutate(order = case_when(
   raw_higher_classification == "Anseriformes" ~ "Anseriformes",
   TRUE ~ "" )) 
-```
-
-### higherClassification
-
-```{r}
-taxon %<>% mutate(higherClassification = case_when(
-  raw_higher_classification == "Angiospermae" ~ paste(kingdom, raw_higher_classification, sep = " | "),
-  raw_higher_classification == "Mollusca" ~ paste(kingdom, phylum, sep = " | "),
-  raw_higher_classification == "Osteichthyes" ~ paste(kingdom, phylum, class, sep = " | "),
-  raw_higher_classification == "Anseriformes" ~ paste(kingdom, phylum, class, order, sep = " | "),
-  raw_higher_classification == "Mammalia" ~ paste(kingdom, phylum, class, sep = " | "))) 
 ```
 
 ### taxonRank
