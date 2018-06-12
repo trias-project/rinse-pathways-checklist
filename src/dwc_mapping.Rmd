@@ -923,7 +923,7 @@ pathway_desc %>%
   summarize(records = n())
 ```
 
-All available pathway information will be mapped to the six **main categories** of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). How these RINSE pathways map to the CBD standard is described in Zieritz et al. 2017:
+All available pathway information will be mapped to the six **main categories** of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). How these RINSE pathways map to the CBD standard is described in the source paper Zieritz et al. 2017 (in Methods > Data analysis):
 
 RINSE pathway | CBD category 
 --- | ---
