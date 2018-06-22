@@ -840,15 +840,7 @@ native_range %<>% mutate(type = "native range")
 
 ## Pathway of introduction
 
-Pathway information in this dataset is a combination of the columns starting with `raw_pathway_` (4 columns) and `raw_vector_` (5 columns).
-
-Create separate dataframe:
-
-```{r}
-pathway_desc <- raw_data
-```
-
-Overview of the 9 columns relevant for this mapping:
+Pathway information in this dataset is a combination of the columns starting with `raw_pathway_` (4 columns: `raw_pathway_accidental`, `raw_pathway_disperal`, `raw_pathway_import_escape` and `raw_pathway_import_release`) and `raw_vector_` (5 columns: `raw_vector_biocontrol`, `raw_vector_leisure`, `raw_vector_industry`, `raw_vector_ornamental`and `raw_vector_research`):
 
 ```{r}
 pathway_desc %>% select(starts_with("raw_vector"), starts_with("raw_pathway")) %>% 
@@ -856,74 +848,7 @@ pathway_desc %>% select(starts_with("raw_vector"), starts_with("raw_pathway")) %
   summarize(records = n()) 
 ```
 
-For some taxa, no pathway information is provided, despite the fact that vector information is available. To indicate this, we create a new column `pathway_provided`, for which the value is `NO` for these specific species:
-
-```{r}
-pathway_desc %<>% mutate(pathway_provided = case_when(
-  is.na(raw_pathway_accidental) &
-  is.na(raw_pathway_dispersal) &
-  is.na(raw_pathway_import_escape) &
-  is.na(raw_pathway_import_release) ~ "NO",
-  TRUE ~ "YES"
-)) 
-```
-
-For some taxa, no vector information is provided, despite the fact that pathway information is available. To indicate this, we create a new column `vector_provided`, for which the value is `NO` for these specific species:
-
-```{r}
-pathway_desc %<>% mutate(vector_provided = case_when(
-  is.na(raw_vector_biocontrol) &
-  is.na(raw_vector_leisure) &
-  is.na(raw_vector_industry) &
-  is.na(raw_vector_ornamental) &
-  is.na(raw_vector_research) ~ "NO",
-  TRUE ~ "YES"
-)) 
-```
-
-We gather this information in two new columns:
-
-- `pathway`: containing the information in `raw_pathway_accidental`, `raw_pathway_disperal`, `raw_pathway_import_escape` and `raw_pathway_import_release`)
-- `vector`: containing the information in `raw_vector_biocontrol`, `raw_vector_leisure`, `raw_vector_industry`, `raw_vector_ornamental`and `raw_vector_research`
-
-```{r}
-pathway_desc %<>% 
-  gather("pathway", "pathway_value", starts_with("raw_pathway")) %<>% 
-  gather("vector", "vector_value", starts_with("raw_vector"))
-```
-
-Preview:
-
-```{r}
-pathway_desc %>%
-  select(pathway, pathway_value, pathway_provided, vector, vector_value, vector_provided) %>%
-  head()
-```
-
-We need to filter out the following combinations:
-
-- Rows for which `pathway_value` = `NA` and `vector_value` = `NA`,
-- Rows for which `pathway_value` = `Y`, `vector_value` = `NA` BUT `vector_provided` = `YES`,
-- Rows for which `pathway_value` = `NA`, `vector_value` = `Y` BUT `vector_provided` = `YES`,
-
-```{r}
-pathway_desc %<>% filter(
-  !(is.na(pathway_value) & is.na(vector_value)) &
-  !(pathway_value == "Y" & is.na(vector_value) & vector_provided == "YES") & 
-  !(is.na(pathway_value) & vector_value == "Y" & pathway_provided == "YES")
-) 
-```
-
-Overview of all possible combinations for pathway and vector:
-
-```{r}
-pathway_desc %>% 
-  select(pathway, pathway_value, vector, vector_value) %>% 
-  group_by_all() %>% 
-  summarize(records = n())
-```
-
-All available pathway information will be mapped to the six **main categories** of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). How these RINSE pathways map to the CBD standard is described in the source paper Zieritz et al. 2017 (in Methods > Data analysis):
+This information will be mapped to the six **main categories** of the [CBD standard](https://www.cbd.int/doc/meetings/sbstta/sbstta-18/official/sbstta-18-09-add1-en.pdf). How these RINSE pathways map to the CBD standard is described in the source paper Zieritz et al. (2017) (in Methods > Data analysis):
 
 RINSE pathway | CBD category 
 --- | ---
@@ -932,12 +857,10 @@ dispersal | corridor, undaided
 import_release | release
 import_escape | escape
 
+For certain taxa, we will complement this pathway information with the specifc vector of introduction (contained in columns starting with `raw_vector_`), using the **subcategories** of the CBD standard:
 
-Vector information for which we have pathway information will be mapped to the **subcategories** of the CBD standard, but **only in certain cases**.
-
-- For pathways `accidental` and `disperal`, we will **not** provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2017).
-- For pathways `import_escape` and `import_release`, we will map vector information to the CBD standard **only** when they map unambigiously to one single CBD term (see also [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3)).
-- For vectors without pathway information (only for vectors `ornamental` and `industry`), we can only map the information to CBD categories/subcategories when the link is straigtforward, which in this case, is never the case. In the cases, we do not map these vectors to the CBD categories.
+- For pathways `accidental` and `disperal`, we will **never** provide vector information. This is because vectors of accidentally introduced species were not analysed in the present study, due to a lack of reliable data (see Zieritz et al. 2017).
+- For pathways `import_escape` and `import_release`, we will map vector information to the CBD subcategories **only** when they map unambigiously to this standard (see table below and [this issue](https://github.com/trias-project/rinse-pathways-checklist/issues/3)) **and** when these vectors are the only vectors of introduction for these taxon.
 
 RINSE pathway | RINSE vector | CBD category | CBD subcategory
 --- | --- | --- | ---
@@ -962,25 +885,80 @@ import_release | leisure | release | NA
 import_release | ornamental | release | NA
 import_release | research | release | NA
 
-We map this information in the new column `description`, for which we use the [TrIAS vocabulary](https://github.com/trias-project/vocab/blob/master/vocabulary/pathway/pathways.tsv):
+We map this information in the new column `description`, for which we use the [TrIAS vocabulary](https://github.com/trias-project/vocab/blob/master/vocabulary/pathway/pathways.tsv).
+
+Create separate dataframe:
+
+```{r}
+pathway_desc <- raw_data
+```
+
+We gather pathway information in one new column `pathway`:
+
+```{r}
+pathway_desc %<>% gather(pathway, value, starts_with("raw_pathway_"), na.rm = TRUE, convert = TRUE)
+```
+
+Column "value" will only contain "Y", so no need for this column
+
+```{r}
+pathway_desc %<>% select(-value)
+```
+
+Map patwhay information to the CBD main category:
+
+```{r}
+pathway_desc %<>% mutate(description = recode(pathway,
+  "raw_pathway_accidental" = "stowaway,contaminant",
+  "raw_pathway_dispersal" = "corridor,natural_dispersal",
+  "raw_pathway_import_escape" = "escape",
+  "raw_pathway_import_release" = "release"
+))
+```
+
+Arrange by taxonID to see things more in context:
+
+```{r}
+pathway_desc %<>% arrange(raw_taxonID)
+```
+
+```{r echo=FALSE}
+pathway_desc %>% select(raw_taxonID, description) %>% head(n = 10)
+```
+
+Map vector information to CBD subcategories for some taxa:
 
 ```{r}
 pathway_desc %<>% mutate(description = case_when(
-  pathway == "raw_pathway_accidental" & !is.na(pathway_value) ~ "stowaway,contaminant",
-  pathway == "raw_pathway_dispersal" & !is.na(pathway_value) ~ "corridor,natural_dispersal", # unaided is translated to natural_dispersal in the TrIAS vocabulary
-  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & vector_value == "Y" ~ "escape_food_bait",
-  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_leisure" & is.na(vector_value) ~ "escape",
-  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector != "raw_vector_leisure"  ~ "escape",
-  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_research" & vector_value == "Y" ~ "escape_research",
-  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector == "raw_vector_research" & is.na(vector_value) ~ "escape",
-  pathway == "raw_pathway_import_escape" & !is.na(pathway_value) & vector != "raw_vector_research" ~ "escape",
-  pathway == "raw_pathway_import_release" & !is.na(pathway_value) & vector == "raw_vector_biocontrol" & vector_value == "Y" ~ "release_biocontrol",
-  pathway == "raw_pathway_import_release" & !is.na(pathway_value) & vector == "raw_vector_biocontrol" & is.na(vector_value) ~ "release",
-  pathway == "raw_pathway_import_release" & !is.na(pathway_value) & vector != "raw_vector_biocontrol" ~ "release",
-  is.na(pathway_value)  ~ ""))
+  description == "escape" &
+    raw_vector_research == "Y" & 
+    raw_vector_leisure == "Y" &
+    is.na(raw_vector_ornamental) &
+    is.na(raw_vector_biocontrol) & 
+    is.na(raw_vector_industry) ~ "escape_research, escape_food_bait",
+  description == "escape" &
+    raw_vector_research == "Y" & 
+    is.na(raw_vector_leisure ) &
+    is.na(raw_vector_ornamental) &
+    is.na(raw_vector_biocontrol) & 
+    is.na(raw_vector_industry) ~ "escape_research",
+  description == "escape" &
+    is.na(raw_vector_research) & 
+    raw_vector_leisure == "Y" &
+    is.na(raw_vector_ornamental) &
+    is.na(raw_vector_biocontrol) & 
+    is.na(raw_vector_industry) ~ "escape_food_bait",
+  description == "release" &
+    is.na(raw_vector_research) & 
+    is.na(raw_vector_leisure) &
+    is.na(raw_vector_ornamental) &
+    raw_vector_biocontrol == "Y" & 
+    is.na(raw_vector_industry) ~ "release_biocontrol",
+TRUE ~ description # Leave rest as is
+))
 ```
 
-Separate `description` when more than two values are provided, i.e. in case of RINSE pathway = accidental or RINSE pathway = dispersal`:
+Separate `description` when more than two values are provided, e.g. in case of RINSE pathway = accidental or RINSE pathway = dispersal`:
 
 ```{r}
 pathway_desc %<>% separate_rows(description, sep = ",")
@@ -998,10 +976,10 @@ Remove duplicate rows:
 pathway_desc %<>% distinct(raw_taxonID, description, .keep_all = TRUE)
 ```
 
-Remove `pathway_provided`, `vector_provided`, `pathway`, `vector`, `pathway_value` and `vector_value`:
+Remove `pathway`:
 
 ```{r}
-pathway_desc %<>% select(-c(pathway_provided, vector_provided, pathway, vector, pathway_value, vector_value)) 
+pathway_desc %<>% select(-pathway)
 ```
 
 Add the prefix `cbd_2014_pathway:` to refer to this standard:
