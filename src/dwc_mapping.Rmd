@@ -843,7 +843,7 @@ native_range %<>% mutate(type = "native range")
 Pathway information in this dataset is a combination of the columns starting with `raw_pathway_` (4 columns: `raw_pathway_accidental`, `raw_pathway_disperal`, `raw_pathway_import_escape` and `raw_pathway_import_release`) and `raw_vector_` (5 columns: `raw_vector_biocontrol`, `raw_vector_leisure`, `raw_vector_industry`, `raw_vector_ornamental` and `raw_vector_research`):
 
 ```{r}
-pathway_desc %>% select(starts_with("raw_vector"), starts_with("raw_pathway")) %>% 
+raw_data %>% select(starts_with("raw_vector"), starts_with("raw_pathway")) %>% 
   group_by_all() %>% 
   summarize(records = n()) 
 ```
