@@ -1,0 +1,16 @@
+name: "RINSE - Pathways and vectors of biological invasions in Northwest Europe"
+output_dir: "../docs"
+include: ["static/"]
+navbar:
+  title: "rinse-pathways-checklist"
+  left:
+    - text: "Darwin Core mapping"
+      href: dwc_mapping.html
+  right:
+    - icon: fa-github fa-lg
+      href: https://github.com/trias-project/rinse-pathways-checklist
+output:
+  html_document:
+    theme: yeti
+    df_print: paged
+    css: "static/css/trias.css"
