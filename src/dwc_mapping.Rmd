@@ -125,16 +125,34 @@ Map the data to [Darwin Core Taxon](http://rs.gbif.org/core/dwc_taxon_2015-04-24
 taxon %<>% mutate(language = "en")
 ```
 
+### license 
+
+```{r}
+taxon %<>% mutate(license = "http://creativecommons.org/publicdomain/zero/1.0/") 
+```
+
 ### rightsHolder
 
 ```{r}
 taxon %<>% mutate(rightsHolder = "University of Cambridge")
 ```
 
+### accessRights
+
+```{r}
+taxon %<>% mutate(accessRights = "http://www.inbo.be/en/norms-for-data-use") 
+```
+
 ### datasetID
 
 ```{r}
 taxon %<>% mutate(datasetID = "")
+```
+
+### institutionCode
+
+```{r}
+taxon %<>% mutate(institutionCode = "CU") 
 ```
 
 ### datasetName
