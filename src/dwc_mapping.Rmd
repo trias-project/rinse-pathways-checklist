@@ -152,7 +152,7 @@ taxon %<>% mutate(datasetID = "")
 ### institutionCode
 
 ```{r}
-taxon %<>% mutate(institutionCode = "CU") 
+taxon %<>% mutate(institutionCode = "University of Cambridge") 
 ```
 
 ### datasetName
