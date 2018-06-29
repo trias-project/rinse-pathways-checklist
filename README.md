@@ -10,8 +10,8 @@ This repository contains the functionality to standardize the data of [Zieritz e
 
 ## Published datasets
 
-* Dataset on the IPT
-* Dataset on GBIF
+* [Dataset on the IPT](https://ipt.inbo.be/resource?r=rinse-pathways-checklist)
+* [Dataset on GBIF](https://www.gbif.org/dataset/1738f272-6b5d-4f43-9a92-453a8c5ea50a)
 
 ## Repo structure
 
