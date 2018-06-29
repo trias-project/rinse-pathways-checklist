@@ -85,6 +85,13 @@ raw_data %<>% mutate(species_clean = case_when(
   TRUE ~ species)) 
 ```
 
+Some scientific names don't have spaces before the `(`. We add them here:
+
+```{r}
+raw_data %<>% mutate(species_clean = str_replace_all(species_clean, "\\(", " ("), 
+                     species_clean = str_replace_all(species_clean, "  ", " "))
+```
+
 Generate `taxonID`:
 
 ```{r}
