@@ -12,7 +12,7 @@
 <meta name="author" content="Lien Reyserhove" />
 <meta name="author" content="Peter Desmet" />
 
-<meta name="date" content="2018-06-27" />
+<meta name="date" content="2018-06-29" />
 
 <title>Darwin Core mapping</title>
 
@@ -306,7 +306,7 @@ div.tocify {
 <h3 class="subtitle"><em>For: RINSE - Pathways and vectors of biological invasions in Northwest Europe</em></h3>
 <h4 class="author"><em>Lien Reyserhove</em></h4>
 <h4 class="author"><em>Peter Desmet</em></h4>
-<h4 class="date"><em>2018-06-27</em></h4>
+<h4 class="date"><em>2018-06-29</em></h4>
 
 </div>
 
@@ -356,6 +356,9 @@ dwc_description_file = &quot;../data/processed/description.csv&quot;</code></pre
   species == &quot;Theba pisanaMüller, 1774)&quot; ~ &quot;Theba pisana (Müller, 1774)&quot;,
   species == &quot;Maylandia sp. M. K. Meyer &amp; W. Förster, 1984&quot; ~ &quot;Maylandia M. K. Meyer &amp; W. Förster, 1984&quot;,
   TRUE ~ species)) </code></pre>
+<p>Some scientific names don’t have spaces before the <code>(</code>. We add them here:</p>
+<pre class="r"><code>raw_data %&lt;&gt;% mutate(species_clean = str_replace_all(species_clean, &quot;\\(&quot;, &quot; (&quot;), 
+                     species_clean = str_replace_all(species_clean, &quot;  &quot;, &quot; &quot;))</code></pre>
 <p>Generate <code>taxonID</code>:</p>
 <pre class="r"><code># Vectorize the digest function (the digest() function isn&#39;t vectorized. So if you pass in a vector, you get one value for the whole vector rather than a digest for each element of the vector):
 vdigest &lt;- Vectorize(digest)
@@ -386,28 +389,40 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
 <h3><span class="header-section-number">3.1.1</span> language</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(language = &quot;en&quot;)</code></pre>
 </div>
+<div id="license" class="section level3">
+<h3><span class="header-section-number">3.1.2</span> license</h3>
+<pre class="r"><code>taxon %&lt;&gt;% mutate(license = &quot;http://creativecommons.org/publicdomain/zero/1.0/&quot;) </code></pre>
+</div>
 <div id="rightsholder" class="section level3">
-<h3><span class="header-section-number">3.1.2</span> rightsHolder</h3>
+<h3><span class="header-section-number">3.1.3</span> rightsHolder</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(rightsHolder = &quot;University of Cambridge&quot;)</code></pre>
 </div>
+<div id="accessrights" class="section level3">
+<h3><span class="header-section-number">3.1.4</span> accessRights</h3>
+<pre class="r"><code>taxon %&lt;&gt;% mutate(accessRights = &quot;http://www.inbo.be/en/norms-for-data-use&quot;) </code></pre>
+</div>
 <div id="datasetid" class="section level3">
-<h3><span class="header-section-number">3.1.3</span> datasetID</h3>
+<h3><span class="header-section-number">3.1.5</span> datasetID</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(datasetID = &quot;&quot;)</code></pre>
 </div>
+<div id="institutioncode" class="section level3">
+<h3><span class="header-section-number">3.1.6</span> institutionCode</h3>
+<pre class="r"><code>taxon %&lt;&gt;% mutate(institutionCode = &quot;University of Cambridge&quot;) </code></pre>
+</div>
 <div id="datasetname" class="section level3">
-<h3><span class="header-section-number">3.1.4</span> datasetName</h3>
+<h3><span class="header-section-number">3.1.7</span> datasetName</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(datasetName = &quot;RINSE - Pathways and vectors of biological invasions in Northwest Europe&quot;)</code></pre>
 </div>
 <div id="taxonid" class="section level3">
-<h3><span class="header-section-number">3.1.5</span> taxonID</h3>
+<h3><span class="header-section-number">3.1.8</span> taxonID</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(taxonID = raw_taxonID)</code></pre>
 </div>
 <div id="scientificname" class="section level3">
-<h3><span class="header-section-number">3.1.6</span> scientificName</h3>
+<h3><span class="header-section-number">3.1.9</span> scientificName</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(scientificName = raw_species_clean)</code></pre>
 </div>
 <div id="kingdom" class="section level3">
-<h3><span class="header-section-number">3.1.7</span> kingdom</h3>
+<h3><span class="header-section-number">3.1.10</span> kingdom</h3>
 <p>Information for the higher classification is contained in <code>raw_higher_classification</code>:</p>
 <pre class="r"><code>taxon %&gt;% distinct(raw_higher_classification)</code></pre>
 <div data-pagedtable="false">
@@ -421,14 +436,14 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
   TRUE ~ &quot;Animalia&quot;)) </code></pre>
 </div>
 <div id="phylum" class="section level3">
-<h3><span class="header-section-number">3.1.8</span> phylum</h3>
+<h3><span class="header-section-number">3.1.11</span> phylum</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(phylum = case_when(
   raw_higher_classification == &quot;Angiospermae&quot; ~ &quot;Magnoliophyta&quot; ,
   raw_higher_classification == &quot;Mollusca&quot; ~ &quot;Mollusca&quot;,
   TRUE ~ &quot;Chordata&quot;)) </code></pre>
 </div>
 <div id="class" class="section level3">
-<h3><span class="header-section-number">3.1.9</span> class</h3>
+<h3><span class="header-section-number">3.1.12</span> class</h3>
 <p>Osteichthyes, which is a superclass, includes Actinopterygii and Sarcopterygii (<a href="https://en.wikipedia.org/wiki/Osteichthyes" class="uri">https://en.wikipedia.org/wiki/Osteichthyes</a>). All the taxa in this list are Actinopterygii which is a class.</p>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(class = case_when(
   raw_higher_classification == &quot;Anseriformes&quot; ~ &quot;Aves&quot;,
@@ -437,13 +452,13 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
   TRUE ~ &quot;&quot;)) </code></pre>
 </div>
 <div id="order" class="section level3">
-<h3><span class="header-section-number">3.1.10</span> order</h3>
+<h3><span class="header-section-number">3.1.13</span> order</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(order = case_when(
   raw_higher_classification == &quot;Anseriformes&quot; ~ &quot;Anseriformes&quot;,
   TRUE ~ &quot;&quot; )) </code></pre>
 </div>
 <div id="taxonrank" class="section level3">
-<h3><span class="header-section-number">3.1.11</span> taxonRank</h3>
+<h3><span class="header-section-number">3.1.14</span> taxonRank</h3>
 <p>The taxon rank can be provided by the <code>nameparser()</code> function of rgbif. First we create a data frame with the parsed names:</p>
 <pre class="r"><code>taxon_ranks &lt;- parsenames(taxon$raw_species_clean)</code></pre>
 <p>And then select rank information from <code>rankmarker</code>. The field <code>notho</code> contains valuable information for the generic hybrids, so this column is selected as well.</p>
@@ -489,7 +504,7 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
 <pre class="r"><code>taxon %&gt;% head()</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["language"],"name":[1],"type":["chr"],"align":["left"]},{"label":["rightsHolder"],"name":[2],"type":["chr"],"align":["left"]},{"label":["datasetID"],"name":[3],"type":["chr"],"align":["left"]},{"label":["datasetName"],"name":[4],"type":["chr"],"align":["left"]},{"label":["taxonID"],"name":[5],"type":["chr"],"align":["left"]},{"label":["scientificName"],"name":[6],"type":["chr"],"align":["left"]},{"label":["kingdom"],"name":[7],"type":["chr"],"align":["left"]},{"label":["phylum"],"name":[8],"type":["chr"],"align":["left"]},{"label":["class"],"name":[9],"type":["chr"],"align":["left"]},{"label":["order"],"name":[10],"type":["chr"],"align":["left"]},{"label":["taxonRank"],"name":[11],"type":["chr"],"align":["left"]}],"data":[{"1":"en","2":"University of Cambridge","3":"","4":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","5":"rinse-pathways-checklist:taxon:01343a3f4feb581bf8c6d74354c7c561","6":"Aegopinella nitens (Michaud, 1831)","7":"Animalia","8":"Mollusca","9":"","10":"","11":"species"},{"1":"en","2":"University of Cambridge","3":"","4":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","5":"rinse-pathways-checklist:taxon:047bea1a4e448882ec99d9a33cc3bbea","6":"Galinsoga quadriradiata Ruiz & Pav.","7":"Plantae","8":"Magnoliophyta","9":"","10":"","11":"species"},{"1":"en","2":"University of Cambridge","3":"","4":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","5":"rinse-pathways-checklist:taxon:04f9665a7644749f1e34d90ec21eb31f","6":"Neogobius kessleri (Günther, 1861)","7":"Animalia","8":"Chordata","9":"Actinopterygii","10":"","11":"species"},{"1":"en","2":"University of Cambridge","3":"","4":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","5":"rinse-pathways-checklist:taxon:06bae93b7cb92044c0c2c0f3d9a36e9d","6":"Ferrissia fragilis (Taylor 1981)","7":"Animalia","8":"Mollusca","9":"","10":"","11":"species"},{"1":"en","2":"University of Cambridge","3":"","4":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","5":"rinse-pathways-checklist:taxon:073e0f359c3485fc1346c6c04dd78a94","6":"Nassella neesiana","7":"Plantae","8":"Magnoliophyta","9":"","10":"","11":"species"},{"1":"en","2":"University of Cambridge","3":"","4":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","5":"rinse-pathways-checklist:taxon:0773644ec687af9edc140218e4af2adf","6":"Oxyura maccoa (Eyton, 1838)","7":"Animalia","8":"Chordata","9":"Aves","10":"Anseriformes","11":"species"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["language"],"name":[1],"type":["chr"],"align":["left"]},{"label":["license"],"name":[2],"type":["chr"],"align":["left"]},{"label":["rightsHolder"],"name":[3],"type":["chr"],"align":["left"]},{"label":["accessRights"],"name":[4],"type":["chr"],"align":["left"]},{"label":["datasetID"],"name":[5],"type":["chr"],"align":["left"]},{"label":["institutionCode"],"name":[6],"type":["chr"],"align":["left"]},{"label":["datasetName"],"name":[7],"type":["chr"],"align":["left"]},{"label":["taxonID"],"name":[8],"type":["chr"],"align":["left"]},{"label":["scientificName"],"name":[9],"type":["chr"],"align":["left"]},{"label":["kingdom"],"name":[10],"type":["chr"],"align":["left"]},{"label":["phylum"],"name":[11],"type":["chr"],"align":["left"]},{"label":["class"],"name":[12],"type":["chr"],"align":["left"]},{"label":["order"],"name":[13],"type":["chr"],"align":["left"]},{"label":["taxonRank"],"name":[14],"type":["chr"],"align":["left"]}],"data":[{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:01343a3f4feb581bf8c6d74354c7c561","9":"Aegopinella nitens (Michaud, 1831)","10":"Animalia","11":"Mollusca","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:047bea1a4e448882ec99d9a33cc3bbea","9":"Galinsoga quadriradiata Ruiz & Pav.","10":"Plantae","11":"Magnoliophyta","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:04f9665a7644749f1e34d90ec21eb31f","9":"Neogobius kessleri (Günther, 1861)","10":"Animalia","11":"Chordata","12":"Actinopterygii","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:06bae93b7cb92044c0c2c0f3d9a36e9d","9":"Ferrissia fragilis (Taylor 1981)","10":"Animalia","11":"Mollusca","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:073e0f359c3485fc1346c6c04dd78a94","9":"Nassella neesiana","10":"Plantae","11":"Magnoliophyta","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:0773644ec687af9edc140218e4af2adf","9":"Oxyura maccoa (Eyton, 1838)","10":"Animalia","11":"Chordata","12":"Aves","13":"Anseriformes","14":"species"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>Save to CSV:</p>
