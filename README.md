@@ -6,7 +6,7 @@ This repository contains the functionality to standardize the data of [Zieritz e
 
 ## Workflow
 
-[source data](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/copy_of_10530_2016_1278_MOESM2_ESM.xlsx) (transcribed from the original [Supplementary Table 2](https://static-content.springer.com/esm/art%3A10.1007%2Fs10530-016-1278-z/MediaObjects/10530_2016_1278_MOESM2_ESM.docx) Word file) → Darwin Core [mapping script](http://trias-project.github.io/rinse-pathways-checklist/dwc_mapping.html) → generated [Darwin Core files](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/processed)
+[source data](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/transcribed_10530_2016_1278_MOESM2_ESM.xlsx) (transcribed from the original [Supplementary Table 2](https://static-content.springer.com/esm/art%3A10.1007%2Fs10530-016-1278-z/MediaObjects/10530_2016_1278_MOESM2_ESM.docx) Word file) → Darwin Core [mapping script](http://trias-project.github.io/rinse-pathways-checklist/dwc_mapping.html) → generated [Darwin Core files](https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/processed)
 
 ## Published datasets
 
