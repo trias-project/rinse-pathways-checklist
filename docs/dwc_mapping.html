@@ -12,7 +12,7 @@
 <meta name="author" content="Lien Reyserhove" />
 <meta name="author" content="Peter Desmet" />
 
-<meta name="date" content="2018-06-29" />
+<meta name="date" content="2018-10-04" />
 
 <title>Darwin Core mapping</title>
 
@@ -30,7 +30,9 @@
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <link href="site_libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet" />
 <script src="site_libs/pagedtable-1.1/js/pagedtable.js"></script>
-<link href="site_libs/font-awesome-4.5.0/css/font-awesome.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.0.13/css/fa-svg-with-js.css" rel="stylesheet" />
+<script src="site_libs/font-awesome-5.0.13/js/fontawesome-all.min.js"></script>
+<script src="site_libs/font-awesome-5.0.13/js/fa-v4-shims.min.js"></script>
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
@@ -99,6 +101,9 @@ img {
 }
 .tabbed-pane {
   padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
 }
 button.code-folding-btn:focus {
   outline: none;
@@ -306,27 +311,20 @@ div.tocify {
 <h3 class="subtitle"><em>For: RINSE - Pathways and vectors of biological invasions in Northwest Europe</em></h3>
 <h4 class="author"><em>Lien Reyserhove</em></h4>
 <h4 class="author"><em>Peter Desmet</em></h4>
-<h4 class="date"><em>2018-06-29</em></h4>
+<h4 class="date"><em>2018-10-04</em></h4>
 
 </div>
 
 
 <p>This document describes how we map the checklist data to Darwin Core. The source file for this document can be found <a href="https://github.com/trias-project/rinse-pathways-checklist/blob/master/src/dwc_mapping.Rmd">here</a>.</p>
-<div id="setup" class="section level1">
-<h1><span class="header-section-number">1</span> Setup</h1>
-<p>Set locale (so we use UTF-8 character encoding):</p>
-<pre class="r"><code># This works on Mac OS X, might not work on other OS
-Sys.setlocale(&quot;LC_CTYPE&quot;, &quot;en_US.UTF-8&quot;)</code></pre>
-<pre><code>## [1] &quot;en_US.UTF-8&quot;</code></pre>
 <p>Load libraries:</p>
-<pre class="r"><code>library(tidyverse) # To transform data
-library(magrittr)  # For %&lt;&gt;% pipes
-library(janitor)   # To clean input data
-library(readxl)    # To read Excel files
-library(stringr)   # To perform string operations
-library(digest)    # To generate hashes
-library(rgbif)     # To parse names
-library(purrr)     # To clean references</code></pre>
+<pre class="r"><code>library(tidyverse)      # To do data science
+library(magrittr)       # To use %&lt;&gt;% pipes
+library(here)           # To find files
+library(janitor)        # To clean input data
+library(readxl)         # To read Excel files
+library(digest)         # To generate hashes
+library(rgbif)          # To use GBIF services</code></pre>
 <p>Set file paths (all paths should be relative to this script):</p>
 <pre class="r"><code># Raw files:
 raw_data_file = &quot;../data/raw/transcribed_10530_2016_1278_MOESM2_ESM.xlsx&quot;
@@ -338,9 +336,8 @@ dwc_literature_references_file = &quot;../data/processed/references.csv&quot;
 dwc_distribution_file = &quot;../data/processed/distribution.csv&quot;
 dwc_profile_file = &quot;../data/processed/speciesprofile.csv&quot;
 dwc_description_file = &quot;../data/processed/description.csv&quot;</code></pre>
-</div>
 <div id="read-and-pre-process-raw-data" class="section level1">
-<h1><span class="header-section-number">2</span> Read and pre-process raw data</h1>
+<h1><span class="header-section-number">1</span> Read and pre-process raw data</h1>
 <p>Create a data frame <code>raw_data</code> from the source data:</p>
 <pre class="r"><code>raw_data &lt;- read_excel(path = raw_data_file) </code></pre>
 <p>Clean the data somewhat: remove empty rows if present and clean names:</p>
@@ -348,7 +345,7 @@ dwc_description_file = &quot;../data/processed/description.csv&quot;</code></pre
   remove_empty(&quot;rows&quot;) %&lt;&gt;%
   clean_names()</code></pre>
 <div id="generate-taxonid" class="section level2">
-<h2><span class="header-section-number">2.1</span> Generate taxonID</h2>
+<h2><span class="header-section-number">1.1</span> Generate taxonID</h2>
 <p>To uniquely identify a taxon in the taxon core and reference taxa in the extensions, we need a <code>taxonID</code>. Since we need it in all generated files, we generate it here in the raw data frame. It is a combination of <code>dataset-shortname:taxon:</code> and a hash based on the scientific name. As long as the scientific name doesn’t change, the ID will be stable. Some of the names require some minor cleaning first though:</p>
 <pre class="r"><code>raw_data %&lt;&gt;% mutate(species_clean = case_when(
   species == &quot;Crassostrea rhizophoraeGuilding 1828&quot; ~ &quot;Crassostrea rhizophorae Guilding 1828&quot;,
@@ -367,7 +364,7 @@ vdigest &lt;- Vectorize(digest)
 raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;, &quot;taxon&quot;, vdigest (species_clean, algo = &quot;md5&quot;), sep = &quot;:&quot;))</code></pre>
 </div>
 <div id="further-pre-processing" class="section level2">
-<h2><span class="header-section-number">2.2</span> Further pre-processing</h2>
+<h2><span class="header-section-number">1.2</span> Further pre-processing</h2>
 <p>Add prefix <code>raw_</code> to all column names to avoid name clashes with Darwin Core terms:</p>
 <pre class="r"><code>colnames(raw_data) &lt;- paste0(&quot;raw_&quot;, colnames(raw_data))</code></pre>
 <p>Preview data:</p>
@@ -380,49 +377,49 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
 </div>
 </div>
 <div id="create-taxon-core" class="section level1">
-<h1><span class="header-section-number">3</span> Create taxon core</h1>
+<h1><span class="header-section-number">2</span> Create taxon core</h1>
 <pre class="r"><code>taxon &lt;- raw_data</code></pre>
 <div id="term-mapping" class="section level2">
-<h2><span class="header-section-number">3.1</span> Term mapping</h2>
+<h2><span class="header-section-number">2.1</span> Term mapping</h2>
 <p>Map the data to <a href="http://rs.gbif.org/core/dwc_taxon_2015-04-24.xml">Darwin Core Taxon</a>.</p>
 <div id="language" class="section level3">
-<h3><span class="header-section-number">3.1.1</span> language</h3>
+<h3><span class="header-section-number">2.1.1</span> language</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(language = &quot;en&quot;)</code></pre>
 </div>
 <div id="license" class="section level3">
-<h3><span class="header-section-number">3.1.2</span> license</h3>
+<h3><span class="header-section-number">2.1.2</span> license</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(license = &quot;http://creativecommons.org/publicdomain/zero/1.0/&quot;) </code></pre>
 </div>
 <div id="rightsholder" class="section level3">
-<h3><span class="header-section-number">3.1.3</span> rightsHolder</h3>
+<h3><span class="header-section-number">2.1.3</span> rightsHolder</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(rightsHolder = &quot;University of Cambridge&quot;)</code></pre>
 </div>
 <div id="accessrights" class="section level3">
-<h3><span class="header-section-number">3.1.4</span> accessRights</h3>
+<h3><span class="header-section-number">2.1.4</span> accessRights</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(accessRights = &quot;http://www.inbo.be/en/norms-for-data-use&quot;) </code></pre>
 </div>
 <div id="datasetid" class="section level3">
-<h3><span class="header-section-number">3.1.5</span> datasetID</h3>
-<pre class="r"><code>taxon %&lt;&gt;% mutate(datasetID = &quot;&quot;)</code></pre>
+<h3><span class="header-section-number">2.1.5</span> datasetID</h3>
+<pre class="r"><code>taxon %&lt;&gt;% mutate(datasetID = &quot;https://doi.org/10.15468/guejza&quot;)</code></pre>
 </div>
 <div id="institutioncode" class="section level3">
-<h3><span class="header-section-number">3.1.6</span> institutionCode</h3>
+<h3><span class="header-section-number">2.1.6</span> institutionCode</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(institutionCode = &quot;University of Cambridge&quot;) </code></pre>
 </div>
 <div id="datasetname" class="section level3">
-<h3><span class="header-section-number">3.1.7</span> datasetName</h3>
+<h3><span class="header-section-number">2.1.7</span> datasetName</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(datasetName = &quot;RINSE - Pathways and vectors of biological invasions in Northwest Europe&quot;)</code></pre>
 </div>
 <div id="taxonid" class="section level3">
-<h3><span class="header-section-number">3.1.8</span> taxonID</h3>
+<h3><span class="header-section-number">2.1.8</span> taxonID</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(taxonID = raw_taxonID)</code></pre>
 </div>
 <div id="scientificname" class="section level3">
-<h3><span class="header-section-number">3.1.9</span> scientificName</h3>
+<h3><span class="header-section-number">2.1.9</span> scientificName</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(scientificName = raw_species_clean)</code></pre>
 </div>
 <div id="kingdom" class="section level3">
-<h3><span class="header-section-number">3.1.10</span> kingdom</h3>
+<h3><span class="header-section-number">2.1.10</span> kingdom</h3>
 <p>Information for the higher classification is contained in <code>raw_higher_classification</code>:</p>
 <pre class="r"><code>taxon %&gt;% distinct(raw_higher_classification)</code></pre>
 <div data-pagedtable="false">
@@ -436,14 +433,14 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
   TRUE ~ &quot;Animalia&quot;)) </code></pre>
 </div>
 <div id="phylum" class="section level3">
-<h3><span class="header-section-number">3.1.11</span> phylum</h3>
+<h3><span class="header-section-number">2.1.11</span> phylum</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(phylum = case_when(
   raw_higher_classification == &quot;Angiospermae&quot; ~ &quot;Magnoliophyta&quot; ,
   raw_higher_classification == &quot;Mollusca&quot; ~ &quot;Mollusca&quot;,
   TRUE ~ &quot;Chordata&quot;)) </code></pre>
 </div>
 <div id="class" class="section level3">
-<h3><span class="header-section-number">3.1.12</span> class</h3>
+<h3><span class="header-section-number">2.1.12</span> class</h3>
 <p>Osteichthyes, which is a superclass, includes Actinopterygii and Sarcopterygii (<a href="https://en.wikipedia.org/wiki/Osteichthyes" class="uri">https://en.wikipedia.org/wiki/Osteichthyes</a>). All the taxa in this list are Actinopterygii which is a class.</p>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(class = case_when(
   raw_higher_classification == &quot;Anseriformes&quot; ~ &quot;Aves&quot;,
@@ -452,13 +449,13 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
   TRUE ~ &quot;&quot;)) </code></pre>
 </div>
 <div id="order" class="section level3">
-<h3><span class="header-section-number">3.1.13</span> order</h3>
+<h3><span class="header-section-number">2.1.13</span> order</h3>
 <pre class="r"><code>taxon %&lt;&gt;% mutate(order = case_when(
   raw_higher_classification == &quot;Anseriformes&quot; ~ &quot;Anseriformes&quot;,
   TRUE ~ &quot;&quot; )) </code></pre>
 </div>
 <div id="taxonrank" class="section level3">
-<h3><span class="header-section-number">3.1.14</span> taxonRank</h3>
+<h3><span class="header-section-number">2.1.14</span> taxonRank</h3>
 <p>The taxon rank can be provided by the <code>nameparser()</code> function of rgbif. First we create a data frame with the parsed names:</p>
 <pre class="r"><code>taxon_ranks &lt;- parsenames(taxon$raw_species_clean)</code></pre>
 <p>And then select rank information from <code>rankmarker</code>. The field <code>notho</code> contains valuable information for the generic hybrids, so this column is selected as well.</p>
@@ -472,7 +469,7 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
   summarise(records = n())</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["rankmarker"],"name":[1],"type":["chr"],"align":["left"]},{"label":["notho"],"name":[2],"type":["chr"],"align":["left"]},{"label":["records"],"name":[3],"type":["int"],"align":["right"]}],"data":[{"1":"f.","2":"NA","3":"1"},{"1":"infrasp.","2":"NA","3":"1"},{"1":"sp.","2":"SPECIFIC","3":"3"},{"1":"sp.","2":"NA","3":"351"},{"1":"NA","2":"NA","3":"3"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["rankmarker"],"name":[1],"type":["chr"],"align":["left"]},{"label":["notho"],"name":[2],"type":["chr"],"align":["left"]},{"label":["records"],"name":[3],"type":["int"],"align":["right"]}],"data":[{"1":"infrasp.","2":"NA","3":"1"},{"1":"sp.","2":"SPECIFIC","3":"3"},{"1":"sp.","2":"NA","3":"352"},{"1":"NA","2":"NA","3":"3"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>Show <code>scientificName</code>s for which <code>rankmarker</code> = <code>NA</code>:</p>
@@ -495,7 +492,7 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
 </div>
 </div>
 <div id="post-processing" class="section level2">
-<h2><span class="header-section-number">3.2</span> Post-processing</h2>
+<h2><span class="header-section-number">2.2</span> Post-processing</h2>
 <p>Remove the original columns:</p>
 <pre class="r"><code>taxon %&lt;&gt;% select(-starts_with(&quot;raw_&quot;), -rankmarker, - notho)</code></pre>
 <p>Sort on <code>taxonID</code>:</p>
@@ -504,22 +501,22 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
 <pre class="r"><code>taxon %&gt;% head()</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["language"],"name":[1],"type":["chr"],"align":["left"]},{"label":["license"],"name":[2],"type":["chr"],"align":["left"]},{"label":["rightsHolder"],"name":[3],"type":["chr"],"align":["left"]},{"label":["accessRights"],"name":[4],"type":["chr"],"align":["left"]},{"label":["datasetID"],"name":[5],"type":["chr"],"align":["left"]},{"label":["institutionCode"],"name":[6],"type":["chr"],"align":["left"]},{"label":["datasetName"],"name":[7],"type":["chr"],"align":["left"]},{"label":["taxonID"],"name":[8],"type":["chr"],"align":["left"]},{"label":["scientificName"],"name":[9],"type":["chr"],"align":["left"]},{"label":["kingdom"],"name":[10],"type":["chr"],"align":["left"]},{"label":["phylum"],"name":[11],"type":["chr"],"align":["left"]},{"label":["class"],"name":[12],"type":["chr"],"align":["left"]},{"label":["order"],"name":[13],"type":["chr"],"align":["left"]},{"label":["taxonRank"],"name":[14],"type":["chr"],"align":["left"]}],"data":[{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:01343a3f4feb581bf8c6d74354c7c561","9":"Aegopinella nitens (Michaud, 1831)","10":"Animalia","11":"Mollusca","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:047bea1a4e448882ec99d9a33cc3bbea","9":"Galinsoga quadriradiata Ruiz & Pav.","10":"Plantae","11":"Magnoliophyta","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:04f9665a7644749f1e34d90ec21eb31f","9":"Neogobius kessleri (Günther, 1861)","10":"Animalia","11":"Chordata","12":"Actinopterygii","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:06bae93b7cb92044c0c2c0f3d9a36e9d","9":"Ferrissia fragilis (Taylor 1981)","10":"Animalia","11":"Mollusca","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:073e0f359c3485fc1346c6c04dd78a94","9":"Nassella neesiana","10":"Plantae","11":"Magnoliophyta","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:0773644ec687af9edc140218e4af2adf","9":"Oxyura maccoa (Eyton, 1838)","10":"Animalia","11":"Chordata","12":"Aves","13":"Anseriformes","14":"species"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["language"],"name":[1],"type":["chr"],"align":["left"]},{"label":["license"],"name":[2],"type":["chr"],"align":["left"]},{"label":["rightsHolder"],"name":[3],"type":["chr"],"align":["left"]},{"label":["accessRights"],"name":[4],"type":["chr"],"align":["left"]},{"label":["datasetID"],"name":[5],"type":["chr"],"align":["left"]},{"label":["institutionCode"],"name":[6],"type":["chr"],"align":["left"]},{"label":["datasetName"],"name":[7],"type":["chr"],"align":["left"]},{"label":["taxonID"],"name":[8],"type":["chr"],"align":["left"]},{"label":["scientificName"],"name":[9],"type":["chr"],"align":["left"]},{"label":["kingdom"],"name":[10],"type":["chr"],"align":["left"]},{"label":["phylum"],"name":[11],"type":["chr"],"align":["left"]},{"label":["class"],"name":[12],"type":["chr"],"align":["left"]},{"label":["order"],"name":[13],"type":["chr"],"align":["left"]},{"label":["taxonRank"],"name":[14],"type":["chr"],"align":["left"]}],"data":[{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"https://doi.org/10.15468/guejza","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:01343a3f4feb581bf8c6d74354c7c561","9":"Aegopinella nitens (Michaud, 1831)","10":"Animalia","11":"Mollusca","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"https://doi.org/10.15468/guejza","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:047bea1a4e448882ec99d9a33cc3bbea","9":"Galinsoga quadriradiata Ruiz & Pav.","10":"Plantae","11":"Magnoliophyta","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"https://doi.org/10.15468/guejza","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:04f9665a7644749f1e34d90ec21eb31f","9":"Neogobius kessleri (Günther, 1861)","10":"Animalia","11":"Chordata","12":"Actinopterygii","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"https://doi.org/10.15468/guejza","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:06bae93b7cb92044c0c2c0f3d9a36e9d","9":"Ferrissia fragilis (Taylor 1981)","10":"Animalia","11":"Mollusca","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"https://doi.org/10.15468/guejza","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:073e0f359c3485fc1346c6c04dd78a94","9":"Nassella neesiana","10":"Plantae","11":"Magnoliophyta","12":"","13":"","14":"species"},{"1":"en","2":"http://creativecommons.org/publicdomain/zero/1.0/","3":"University of Cambridge","4":"http://www.inbo.be/en/norms-for-data-use","5":"https://doi.org/10.15468/guejza","6":"University of Cambridge","7":"RINSE - Pathways and vectors of biological invasions in Northwest Europe","8":"rinse-pathways-checklist:taxon:0773644ec687af9edc140218e4af2adf","9":"Oxyura maccoa (Eyton, 1838)","10":"Animalia","11":"Chordata","12":"Aves","13":"Anseriformes","14":"species"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>Save to CSV:</p>
-<pre class="r"><code>write.csv(taxon, file = dwc_taxon_file, na = &quot;&quot;, row.names = FALSE, fileEncoding = &quot;UTF-8&quot;)</code></pre>
+<pre class="r"><code>write_csv(taxon, dwc_taxon_file, na = &quot;&quot;)</code></pre>
 </div>
 </div>
 <div id="create-literature-reference-extension" class="section level1">
-<h1><span class="header-section-number">4</span> Create literature reference extension</h1>
+<h1><span class="header-section-number">3</span> Create literature reference extension</h1>
 <pre class="r"><code>literature_references &lt;- raw_data</code></pre>
 <div id="pre-processing" class="section level2">
-<h2><span class="header-section-number">4.1</span> Pre-processing</h2>
+<h2><span class="header-section-number">3.1</span> Pre-processing</h2>
 <p>Information for the literature references is contained in <code>raw_references</code>, which are (sequences of) numbers in this case. The link between these numbers and the full references is provided in the original <a href="https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/10530_2016_1278_MOESM2_ESM.docx">Supplementary material file</a> (page 28-30). We copy-pasted this information to a newly generated Excel file <a href="https://github.com/trias-project/rinse-pathways-checklist/blob/master/data/raw/transcribed_references.xlsx">references</a>, here saved as the dataframe <code>transcribed_references</code>:</p>
 <pre class="r"><code>transcribed_references &lt;- read_excel(path = references, col_types = &quot;text&quot;)</code></pre>
 <div id="full-references-on-per-row" class="section level3">
-<h3><span class="header-section-number">4.1.1</span> Full references (on per row)</h3>
+<h3><span class="header-section-number">3.1.1</span> Full references (on per row)</h3>
 <p>The literature reference extension is a dataframe in which one row contains one single reference (a short identifier and the full reference) per taxon. We generate this file in several steps:</p>
 <ol style="list-style-type: decimal">
 <li>Provide <strong>all</strong> reference numbers in <code>raw_references</code>, instead of using the format containing <code>-</code> for a range of numbers between a delimited minimun and maximum (e.g. <code>3-7</code> is transformed to <code>3,4,5,6,7</code>). To accomplish this, we first create the function <code>hyphen_to_sequence()</code>:</li>
@@ -562,7 +559,7 @@ raw_data %&lt;&gt;% mutate(taxonID = paste(&quot;rinse-pathways-checklist&quot;,
 </div>
 </div>
 <div id="source-references-sequence-of-identifiers" class="section level3">
-<h3><span class="header-section-number">4.1.2</span> Source references (sequence of identifiers)</h3>
+<h3><span class="header-section-number">3.1.2</span> Source references (sequence of identifiers)</h3>
 <p>For the mapping of the field <code>source</code> in the other extensions, we need to translate the sequence of reference numbers given for each taxon in <code>raw_references</code> into a sequence of all corresponding identifiers separated by <code>|</code>. As we need to do this several times, we generate a new dataframe <code>identifier_sequence</code> here, linking the sequence of numbers in <code>raw_references</code> with the sequence of identifiers.</p>
 <p>Generate dataframe <code>identifier_sequence</code> with the required columns (add taxonID as this is necessary for spreading in the next step):</p>
 <pre class="r"><code>identifier_sequence &lt;- literature_references %&gt;% select(raw_taxonID, raw_references, references_sep, identifier)</code></pre>
@@ -593,23 +590,23 @@ identifier_sequence %&lt;&gt;% rename_at(vars(old_names), ~ new_names)</code></p
 </div>
 </div>
 <div id="term-mapping-1" class="section level2">
-<h2><span class="header-section-number">4.2</span> Term mapping</h2>
+<h2><span class="header-section-number">3.2</span> Term mapping</h2>
 <p>Map the data to <a href="http://rs.gbif.org/extension/gbif/1.0/references.xml">Literature References</a>.</p>
 <div id="taxonid-1" class="section level3">
-<h3><span class="header-section-number">4.2.1</span> taxonID</h3>
+<h3><span class="header-section-number">3.2.1</span> taxonID</h3>
 <pre class="r"><code>literature_references %&lt;&gt;% mutate(taxonID = raw_taxonID)</code></pre>
 </div>
 <div id="identifier" class="section level3">
-<h3><span class="header-section-number">4.2.2</span> identifier</h3>
+<h3><span class="header-section-number">3.2.2</span> identifier</h3>
 <pre class="r"><code>literature_references %&lt;&gt;% select(-identifier, everything()) </code></pre>
 </div>
 <div id="bibliographiccitation" class="section level3">
-<h3><span class="header-section-number">4.2.3</span> bibliographicCitation</h3>
+<h3><span class="header-section-number">3.2.3</span> bibliographicCitation</h3>
 <pre class="r"><code>literature_references %&lt;&gt;% mutate(bibliographicCitation = full_reference) </code></pre>
 </div>
 </div>
 <div id="post-processing-1" class="section level2">
-<h2><span class="header-section-number">4.3</span> Post-processing</h2>
+<h2><span class="header-section-number">3.3</span> Post-processing</h2>
 <p>Remove the original columns:</p>
 <pre class="r"><code>literature_references %&lt;&gt;% select(-starts_with(&quot;raw_&quot;), -references_sep, -full_reference)</code></pre>
 <p>Sort on <code>taxonID</code>:</p>
@@ -622,14 +619,14 @@ identifier_sequence %&lt;&gt;% rename_at(vars(old_names), ~ new_names)</code></p
   </script>
 </div>
 <p>Save to CSV:</p>
-<pre class="r"><code>write.csv(literature_references, file = dwc_literature_references_file, na = &quot;&quot;, row.names = FALSE, fileEncoding = &quot;UTF-8&quot;)</code></pre>
+<pre class="r"><code>write_csv(literature_references, dwc_literature_references_file, na = &quot;&quot;)</code></pre>
 </div>
 </div>
 <div id="create-distribution-extension" class="section level1">
-<h1><span class="header-section-number">5</span> Create distribution extension</h1>
+<h1><span class="header-section-number">4</span> Create distribution extension</h1>
 <pre class="r"><code>distribution &lt;- raw_data</code></pre>
 <div id="pre-processing-1" class="section level2">
-<h2><span class="header-section-number">5.1</span> Pre-processing</h2>
+<h2><span class="header-section-number">4.1</span> Pre-processing</h2>
 <p>Information for the distributions and associated dates of first observation is contained in eight columns in total:</p>
 <ul>
 <li>4 columns for the distribution information (Great Britain, France, Belgium and the Netherlands in resp. <code>raw_established_gb</code>, <code>raw_established_france</code>, <code>raw_established_belgium</code> and <code>raw_established_netherlands</code>)</li>
@@ -672,14 +669,14 @@ identifier_sequence %&lt;&gt;% rename_at(vars(old_names), ~ new_names)</code></p
 </div>
 </div>
 <div id="term-mapping-2" class="section level2">
-<h2><span class="header-section-number">5.2</span> Term mapping</h2>
+<h2><span class="header-section-number">4.2</span> Term mapping</h2>
 <p>Map the data to <a href="http://rs.gbif.org/extension/gbif/1.0/distribution.xml">Species Distribution</a>.</p>
 <div id="taxonid-2" class="section level3">
-<h3><span class="header-section-number">5.2.1</span> taxonID</h3>
+<h3><span class="header-section-number">4.2.1</span> taxonID</h3>
 <pre class="r"><code>distribution %&lt;&gt;% mutate(taxonID = raw_taxonID)</code></pre>
 </div>
 <div id="locationid" class="section level3">
-<h3><span class="header-section-number">5.2.2</span> locationID</h3>
+<h3><span class="header-section-number">4.2.2</span> locationID</h3>
 <pre class="r"><code>distribution %&lt;&gt;% mutate(locationID = case_when(
    country == &quot;Great Britain&quot; ~ &quot; WGSRPD:GRB&quot;,
    country == &quot;France&quot; ~ &quot;ISO_3166-2:FR&quot;,
@@ -687,11 +684,11 @@ identifier_sequence %&lt;&gt;% rename_at(vars(old_names), ~ new_names)</code></p
    country == &quot;The Netherlands&quot; ~ &quot;ISO_3166-2:NL&quot;))</code></pre>
 </div>
 <div id="locality" class="section level3">
-<h3><span class="header-section-number">5.2.3</span> locality</h3>
+<h3><span class="header-section-number">4.2.3</span> locality</h3>
 <pre class="r"><code>distribution %&lt;&gt;% mutate(locality = country)</code></pre>
 </div>
 <div id="countrycode" class="section level3">
-<h3><span class="header-section-number">5.2.4</span> countryCode</h3>
+<h3><span class="header-section-number">4.2.4</span> countryCode</h3>
 <pre class="r"><code>distribution %&lt;&gt;% mutate(countryCode = case_when(
    country == &quot;Great Britain&quot; ~ &quot;GB&quot;,
    country == &quot;France&quot; ~ &quot;FR&quot;,
@@ -699,15 +696,15 @@ identifier_sequence %&lt;&gt;% rename_at(vars(old_names), ~ new_names)</code></p
    country == &quot;The Netherlands&quot; ~ &quot;NL&quot;))</code></pre>
 </div>
 <div id="occurrencestatus" class="section level3">
-<h3><span class="header-section-number">5.2.5</span> occurrenceStatus</h3>
+<h3><span class="header-section-number">4.2.5</span> occurrenceStatus</h3>
 <pre class="r"><code>distribution %&lt;&gt;% mutate(occurrenceStatus = &quot;present&quot;) </code></pre>
 </div>
 <div id="establishmentmeans" class="section level3">
-<h3><span class="header-section-number">5.2.6</span> establishmentMeans</h3>
+<h3><span class="header-section-number">4.2.6</span> establishmentMeans</h3>
 <pre class="r"><code>distribution %&lt;&gt;% mutate(establishmentMeans = &quot;introduced&quot;) </code></pre>
 </div>
 <div id="eventdate" class="section level3">
-<h3><span class="header-section-number">5.2.7</span> eventDate</h3>
+<h3><span class="header-section-number">4.2.7</span> eventDate</h3>
 <p>Inspect dates:</p>
 <pre class="r"><code>distribution %&gt;% distinct(date) %&gt;% arrange(date)</code></pre>
 <div data-pagedtable="false">
@@ -747,7 +744,7 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
   date != &quot;&quot; ~ paste(date, &quot;2017&quot;, sep = &quot;/&quot;))) </code></pre>
 </div>
 <div id="source" class="section level3">
-<h3><span class="header-section-number">5.2.8</span> source</h3>
+<h3><span class="header-section-number">4.2.8</span> source</h3>
 <p>Information about the source is provided in <code>raw_references</code>. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe <code>identifier_sequence</code> generated earlier.</p>
 <pre class="r"><code>distribution %&lt;&gt;% left_join(identifier_sequence, by = (&quot;raw_references&quot;))</code></pre>
 <p>Rename <code>id_sequence</code>:</p>
@@ -755,7 +752,7 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
 </div>
 </div>
 <div id="post-processing-2" class="section level2">
-<h2><span class="header-section-number">5.3</span> Post-processing</h2>
+<h2><span class="header-section-number">4.3</span> Post-processing</h2>
 <p>Remove the original columns:</p>
 <pre class="r"><code>distribution %&lt;&gt;% select(-starts_with(&quot;raw_&quot;), -country, -date)</code></pre>
 <p>Sort on <code>taxonID</code>:</p>
@@ -768,11 +765,11 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
   </script>
 </div>
 <p>Save to CSV:</p>
-<pre class="r"><code>write.csv(distribution, file = dwc_distribution_file, na = &quot;&quot;, row.names = FALSE, fileEncoding = &quot;UTF-8&quot;)</code></pre>
+<pre class="r"><code>write_csv(distribution, dwc_distribution_file, na = &quot;&quot;)</code></pre>
 </div>
 </div>
 <div id="create-species-profile-extension" class="section level1">
-<h1><span class="header-section-number">6</span> Create species profile extension</h1>
+<h1><span class="header-section-number">5</span> Create species profile extension</h1>
 <p>In this extension we express broad habitat characteristics (e.g. <code>isTerrestrial</code>) of the species.</p>
 <pre class="r"><code>species_profile &lt;- raw_data</code></pre>
 <p>Habitat information can be found in <code>raw_environment</code>, which describes whether a species is found in freshwater, terrestrial, marine or a combination of these habitats.</p>
@@ -793,14 +790,14 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
 </ul>
 <p>We will add this information in the mapping. Environment information is mapped to <code>isFreshwater</code>, <code>isTerrestrial</code>, <code>isMarine</code> or a combination of these terms in the species profile extension.</p>
 <div id="term-mapping-3" class="section level2">
-<h2><span class="header-section-number">6.1</span> Term mapping</h2>
+<h2><span class="header-section-number">5.1</span> Term mapping</h2>
 <p>Map the data to <a href="http://rs.gbif.org/extension/gbif/1.0/speciesprofile.xml">Species Profile</a>.</p>
 <div id="taxonid-3" class="section level3">
-<h3><span class="header-section-number">6.1.1</span> taxonID</h3>
+<h3><span class="header-section-number">5.1.1</span> taxonID</h3>
 <pre class="r"><code>species_profile %&lt;&gt;% mutate(taxonID = raw_taxonID)</code></pre>
 </div>
 <div id="ismarine" class="section level3">
-<h3><span class="header-section-number">6.1.2</span> isMarine</h3>
+<h3><span class="header-section-number">5.1.2</span> isMarine</h3>
 <pre class="r"><code>species_profile %&lt;&gt;% mutate(isMarine = case_when(
   raw_environment == &quot;M&quot; |
   raw_environment == &quot;M+F&quot; |
@@ -810,7 +807,7 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
 ))</code></pre>
 </div>
 <div id="isfreshwater" class="section level3">
-<h3><span class="header-section-number">6.1.3</span> isFreshwater</h3>
+<h3><span class="header-section-number">5.1.3</span> isFreshwater</h3>
 <pre class="r"><code>species_profile %&lt;&gt;% mutate(isFreshwater = case_when(
   raw_environment == &quot;F&quot; |
   raw_environment == &quot;F,T&quot; |
@@ -820,7 +817,7 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
   TRUE ~ &quot;FALSE&quot;))</code></pre>
 </div>
 <div id="isterrestrial" class="section level3">
-<h3><span class="header-section-number">6.1.4</span> isTerrestrial</h3>
+<h3><span class="header-section-number">5.1.4</span> isTerrestrial</h3>
 <pre class="r"><code>species_profile %&lt;&gt;% mutate(isTerrestrial = case_when(
   raw_environment == &quot;F,T&quot; |
   raw_environment == &quot;F+T&quot; |
@@ -841,7 +838,7 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
 </div>
 </div>
 <div id="post-processing-3" class="section level2">
-<h2><span class="header-section-number">6.2</span> Post-processing</h2>
+<h2><span class="header-section-number">5.2</span> Post-processing</h2>
 <p>Remove the original columns:</p>
 <pre class="r"><code>species_profile %&lt;&gt;% select(-starts_with(&quot;raw_&quot;))</code></pre>
 <p>Sort on <code>taxonID</code>:</p>
@@ -854,11 +851,11 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
   </script>
 </div>
 <p>Save to CSV:</p>
-<pre class="r"><code>write.csv(species_profile, file = dwc_profile_file, na = &quot;&quot;, row.names = FALSE, fileEncoding = &quot;UTF-8&quot;)</code></pre>
+<pre class="r"><code>write_csv(species_profile, dwc_profile_file, na = &quot;&quot;)</code></pre>
 </div>
 </div>
 <div id="create-description-extension" class="section level1">
-<h1><span class="header-section-number">7</span> Create description extension</h1>
+<h1><span class="header-section-number">6</span> Create description extension</h1>
 <p>In the description extension we want to include several important characteristics (hereafter refered to as descriptors) about the species:</p>
 <ul>
 <li>Native range</li>
@@ -866,7 +863,7 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
 </ul>
 <p>A single taxon can have multiple descriptions of the same type (e.g. multiple native ranges), expressed as multiple rows in the description extension. For each descriptor, we create a separate dataframe to process the specific information. We always specify <em>which descriptor</em> we map (<code>type</code> column) and its <em>specific content</em> (<code>description</code> column). After the mapping of these Darwin Core terms <code>type</code> and <code>value</code>, we merge the dataframes to generate one single description extension. We then continue the mapping process by adding the other Darwin Core terms (which content is independent of the type of descriptor, such as <code>language</code>).</p>
 <div id="native-range" class="section level2">
-<h2><span class="header-section-number">7.1</span> Native range</h2>
+<h2><span class="header-section-number">6.1</span> Native range</h2>
 <p>Native range information (e.g. <code>Australia</code>) can be found in <code>raw_origin</code>.</p>
 <p>Create separate dataframe:</p>
 <pre class="r"><code>native_range &lt;- raw_data</code></pre>
@@ -926,7 +923,7 @@ distribution %&lt;&gt;% mutate(date = recode(date,    # recode deviating formats
 <pre class="r"><code>native_range %&lt;&gt;% mutate(type = &quot;native range&quot;)</code></pre>
 </div>
 <div id="pathway-of-introduction" class="section level2">
-<h2><span class="header-section-number">7.2</span> Pathway of introduction</h2>
+<h2><span class="header-section-number">6.2</span> Pathway of introduction</h2>
 <p>Pathway information in this dataset is a combination of the columns starting with <code>raw_pathway_</code> (4 columns: <code>raw_pathway_accidental</code>, <code>raw_pathway_disperal</code>, <code>raw_pathway_import_escape</code> and <code>raw_pathway_import_release</code>) and <code>raw_vector_</code> (5 columns: <code>raw_vector_biocontrol</code>, <code>raw_vector_leisure</code>, <code>raw_vector_industry</code>, <code>raw_vector_ornamental</code> and <code>raw_vector_research</code>):</p>
 <pre class="r"><code>raw_data %&gt;% select(starts_with(&quot;raw_vector&quot;), starts_with(&quot;raw_pathway&quot;)) %&gt;% 
   group_by_all() %&gt;% 
@@ -1163,39 +1160,39 @@ TRUE ~ description # Leave rest as is
 <pre class="r"><code>pathway_desc %&lt;&gt;% mutate(type = &quot;pathway&quot;)</code></pre>
 </div>
 <div id="union-descriptions" class="section level2">
-<h2><span class="header-section-number">7.3</span> Union descriptions</h2>
+<h2><span class="header-section-number">6.3</span> Union descriptions</h2>
 <p>Union native range and pathway of introduction:</p>
 <pre class="r"><code>description_ext &lt;- bind_rows(native_range, pathway_desc)</code></pre>
 </div>
 <div id="term-mapping-4" class="section level2">
-<h2><span class="header-section-number">7.4</span> Term mapping</h2>
+<h2><span class="header-section-number">6.4</span> Term mapping</h2>
 <p>Map the data to <a href="http://rs.gbif.org/extension/gbif/1.0/description.xml">Taxon Description</a>.</p>
 <div id="taxonid-4" class="section level3">
-<h3><span class="header-section-number">7.4.1</span> taxonID</h3>
+<h3><span class="header-section-number">6.4.1</span> taxonID</h3>
 <pre class="r"><code>description_ext %&lt;&gt;% mutate(taxonID = raw_taxonID)</code></pre>
 </div>
 <div id="description" class="section level3">
-<h3><span class="header-section-number">7.4.2</span> description</h3>
+<h3><span class="header-section-number">6.4.2</span> description</h3>
 <pre class="r"><code>description_ext %&lt;&gt;% mutate(description = description)</code></pre>
 </div>
 <div id="type" class="section level3">
-<h3><span class="header-section-number">7.4.3</span> type</h3>
+<h3><span class="header-section-number">6.4.3</span> type</h3>
 <pre class="r"><code>description_ext %&lt;&gt;% mutate(type = type)</code></pre>
 </div>
 <div id="source-1" class="section level3">
-<h3><span class="header-section-number">7.4.4</span> source</h3>
+<h3><span class="header-section-number">6.4.4</span> source</h3>
 <p>Information about the source is provided in <code>raw_references</code>. We replace the sequence of reference numbers by the sequence of identifiers (not full references), provided in the dataframe <code>identifier_sequence</code> generated earlier.</p>
 <pre class="r"><code>description_ext %&lt;&gt;% left_join(identifier_sequence, by = (&quot;raw_references&quot;))</code></pre>
 <p>Rename <code>id_sequence</code>:</p>
 <pre class="r"><code>description_ext %&lt;&gt;%  rename(&quot;source&quot; = &quot;id_sequence&quot;)</code></pre>
 </div>
 <div id="language-1" class="section level3">
-<h3><span class="header-section-number">7.4.5</span> language</h3>
+<h3><span class="header-section-number">6.4.5</span> language</h3>
 <pre class="r"><code>description_ext %&lt;&gt;% mutate(language = &quot;en&quot;)</code></pre>
 </div>
 </div>
 <div id="post-processing-4" class="section level2">
-<h2><span class="header-section-number">7.5</span> Post-processing</h2>
+<h2><span class="header-section-number">6.5</span> Post-processing</h2>
 <p>Remove the original columns:</p>
 <pre class="r"><code>description_ext %&lt;&gt;% select(-starts_with(&quot;raw_&quot;))</code></pre>
 <p>Move <code>taxonID</code> to the first position:</p>
@@ -1212,7 +1209,7 @@ TRUE ~ description # Leave rest as is
   </script>
 </div>
 <p>Save to CSV:</p>
-<pre class="r"><code>write.csv(description_ext, file = dwc_description_file, na = &quot;&quot;, row.names = FALSE, fileEncoding = &quot;UTF-8&quot;)</code></pre>
+<pre class="r"><code>write_csv(description_ext, dwc_description_file, na = &quot;&quot;)</code></pre>
 </div>
 </div>
 
