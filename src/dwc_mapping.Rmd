@@ -72,6 +72,9 @@ raw_data %<>% mutate(species_clean = case_when(
   species == "Petricola pholadiformisLamarck, 1818" ~ "Petricola pholadiformis Lamarck, 1818",
   species == "Theba pisanaMüller, 1774)" ~ "Theba pisana (Müller, 1774)",
   species == "Maylandia sp. M. K. Meyer & W. Förster, 1984" ~ "Maylandia M. K. Meyer & W. Förster, 1984",
+  species == "Cernuella cisalpine (Rossmässler, 1837)" ~ "Cernuella cisalpina (Rossmässler, 1837)",
+  species == "Micropogonias undulatus (Linnaeus, 1766)" ~ "Micropogonias undulatus (Linnaeus, 1766)",
+  species == "Solidago gigantean Aiton" ~ "Solidago gigantea Aiton",
   TRUE ~ species)) 
 ```
 
